@@ -27,6 +27,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
         private Color _personalColor = new Color(0.75f, 0.75f, 0.75f);
         private Color _accentColor = new Color(0.2f, 0.4f, 0.7f);
         private Texture2D _backgroundTexture;
+        private bool _stylesInitialized;
 
         private const float MIN_WINDOW_WIDTH = 450f;
         private const float MIN_WINDOW_HEIGHT = 300f;
@@ -45,7 +46,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
         private void OnEnable()
         {
-            InitializeStyles();
+            _stylesInitialized = false;
         }
 
         private void OnDisable()
@@ -55,10 +56,13 @@ namespace Microsoft.Unity.VisualStudio.Editor
                 DestroyImmediate(_backgroundTexture);
                 _backgroundTexture = null;
             }
+            _stylesInitialized = false;
         }
 
         private void InitializeStyles()
         {
+            if (_stylesInitialized) return;
+
             // Header style
             _headerStyle = new GUIStyle(EditorStyles.boldLabel)
             {
@@ -121,15 +125,58 @@ namespace Microsoft.Unity.VisualStudio.Editor
                 _backgroundTexture.SetPixel(0, 0, EditorGUIUtility.isProSkin ? _proColor : _personalColor);
                 _backgroundTexture.Apply();
             }
+
+            _stylesInitialized = true;
         }
 
         private void OnGUI()
         {
-            if (Event.current.type == EventType.Layout)
+            // Initialize styles if needed
+            if (!_stylesInitialized || Event.current.type == EventType.Layout)
             {
                 InitializeStyles();
             }
 
+            // Handle window resizing
+            HandleWindowResize();
+
+            // Draw window content
+            DrawWindowContent();
+
+            // Handle repaint requests
+            if (GUI.changed)
+            {
+                Repaint();
+            }
+        }
+
+        private void HandleWindowResize()
+        {
+            if (Event.current.type == EventType.Repaint)
+            {
+                Rect windowRect = position;
+                bool needsResize = false;
+
+                if (windowRect.width < MIN_WINDOW_WIDTH)
+                {
+                    windowRect.width = MIN_WINDOW_WIDTH;
+                    needsResize = true;
+                }
+                if (windowRect.height < MIN_WINDOW_HEIGHT)
+                {
+                    windowRect.height = MIN_WINDOW_HEIGHT;
+                    needsResize = true;
+                }
+
+                if (needsResize)
+                {
+                    position = windowRect;
+                }
+            }
+        }
+
+        private void DrawWindowContent()
+        {
             DrawBackground();
 
             EditorGUILayout.BeginVertical();
@@ -141,8 +188,8 @@ namespace Microsoft.Unity.VisualStudio.Editor
                 DrawOptions();
 
                 // Scrollable content area
-                _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, 
-                    GUILayout.ExpandHeight(true), 
+                _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition,
+                    GUILayout.ExpandHeight(true),
                     GUILayout.ExpandWidth(true));
                 {
                     DrawMainContent();
@@ -150,18 +197,6 @@ namespace Microsoft.Unity.VisualStudio.Editor
                 EditorGUILayout.EndScrollView();
             }
             EditorGUILayout.EndVertical();
-
-            // Handle window resizing
-            if (Event.current.type == EventType.Repaint)
-            {
-                Rect windowRect = position;
-                if (windowRect.width < MIN_WINDOW_WIDTH)
-                    windowRect.width = MIN_WINDOW_WIDTH;
-                if (windowRect.height < MIN_WINDOW_HEIGHT)
-                    windowRect.height = MIN_WINDOW_HEIGHT;
-                if (windowRect != position)
-                    position = windowRect;
-            }
         }
 
         private void DrawBackground()
@@ -179,13 +214,13 @@ namespace Microsoft.Unity.VisualStudio.Editor
                 // Left side buttons
                 GUILayout.BeginHorizontal(GUILayout.Width(position.width * 0.6f));
                 {
-                    if (GUILayout.Button(new GUIContent(" Analyze", EditorGUIUtility.IconContent("d_Refresh").image), 
+                    if (GUILayout.Button(new GUIContent(" Analyze", EditorGUIUtility.IconContent("d_Refresh").image),
                         _toolbarButtonStyle, GUILayout.Width(80)))
                     {
                         RunAnalysis();
                     }
 
-                    if (GUILayout.Button(new GUIContent(" Optimize", EditorGUIUtility.IconContent("d_Settings").image), 
+                    if (GUILayout.Button(new GUIContent(" Optimize", EditorGUIUtility.IconContent("d_Settings").image),
                         _toolbarButtonStyle, GUILayout.Width(80)))
                     {
                         if (EditorUtility.DisplayDialog("Optimize Assets",
@@ -196,7 +231,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
                         }
                     }
 
-                    if (GUILayout.Button(new GUIContent(" Refresh", EditorGUIUtility.IconContent("d_Refresh").image), 
+                    if (GUILayout.Button(new GUIContent(" Refresh", EditorGUIUtility.IconContent("d_Refresh").image),
                         _toolbarButtonStyle, GUILayout.Width(80)))
                     {
                         RefreshData();
@@ -206,7 +241,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
                 // Right side search
                 GUILayout.FlexibleSpace();
-                
+
                 GUILayout.BeginHorizontal(GUILayout.Width(220));
                 {
                     GUILayout.Label(EditorGUIUtility.IconContent("d_Search Icon"), GUILayout.Width(20));
@@ -308,7 +343,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
         private void DrawOptimizationSettings()
         {
             EditorGUILayout.Space(5);
-            
+
             // Texture Settings
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             EditorGUILayout.LabelField(new GUIContent(" Texture Settings", EditorGUIUtility.IconContent("d_Texture Icon").image), _sectionStyle);
@@ -364,13 +399,13 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
             foreach (var asset in unusedAssets)
             {
-                if (!string.IsNullOrEmpty(_searchFilter) && 
+                if (!string.IsNullOrEmpty(_searchFilter) &&
                     !asset.Key.ToLower().Contains(_searchFilter.ToLower()))
                     continue;
 
                 DrawAssetEntry(asset.Key, true);
             }
-            
+
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space(10);
         }
@@ -390,23 +425,23 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
             foreach (var asset in _assetDependencies.OrderBy(x => x.Key))
             {
-                if (!string.IsNullOrEmpty(_searchFilter) && 
+                if (!string.IsNullOrEmpty(_searchFilter) &&
                     !asset.Key.ToLower().Contains(_searchFilter.ToLower()))
                     continue;
 
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                
+
                 EditorGUILayout.BeginHorizontal();
                 var obj = AssetDatabase.LoadAssetAtPath<Object>(asset.Key);
                 var icon = AssetDatabase.GetCachedIcon(asset.Key);
-                
+
                 if (icon != null)
                 {
                     GUILayout.Label(icon, GUILayout.Width(20), GUILayout.Height(20));
                 }
-                
+
                 EditorGUILayout.LabelField(asset.Key, EditorStyles.boldLabel);
-                
+
                 if (obj != null && GUILayout.Button("Select", _buttonStyle))
                 {
                     Selection.activeObject = obj;
@@ -423,14 +458,14 @@ namespace Microsoft.Unity.VisualStudio.Editor
                         var depObj = AssetDatabase.LoadAssetAtPath<Object>(dependency);
                         var depIcon = AssetDatabase.GetCachedIcon(dependency);
                         GUILayout.Space(20);
-                        
+
                         if (depIcon != null)
                         {
                             GUILayout.Label(depIcon, GUILayout.Width(16), GUILayout.Height(16));
                         }
-                        
+
                         EditorGUILayout.LabelField(dependency);
-                        
+
                         if (depObj != null && GUILayout.Button("Select", _buttonStyle))
                         {
                             Selection.activeObject = depObj;
@@ -444,11 +479,11 @@ namespace Microsoft.Unity.VisualStudio.Editor
                     EditorGUILayout.LabelField("No dependencies");
                 }
                 EditorGUI.indentLevel--;
-                
+
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.Space(5);
             }
-            
+
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space(10);
         }
@@ -461,23 +496,23 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
             foreach (var assetPath in _invalidNamedAssets)
             {
-                if (!string.IsNullOrEmpty(_searchFilter) && 
+                if (!string.IsNullOrEmpty(_searchFilter) &&
                     !assetPath.ToLower().Contains(_searchFilter.ToLower()))
                     continue;
 
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                
+
                 EditorGUILayout.BeginHorizontal();
                 var obj = AssetDatabase.LoadAssetAtPath<Object>(assetPath);
                 var icon = AssetDatabase.GetCachedIcon(assetPath);
-                
+
                 if (icon != null)
                 {
                     GUILayout.Label(icon, GUILayout.Width(20), GUILayout.Height(20));
                 }
-                
+
                 EditorGUILayout.LabelField(assetPath, EditorStyles.boldLabel);
-                
+
                 if (obj != null && GUILayout.Button("Select", _buttonStyle))
                 {
                     Selection.activeObject = obj;
@@ -487,11 +522,11 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
                 string suggestedName = AssetOptimizer.SuggestAssetName(assetPath);
                 EditorGUILayout.LabelField($"Suggested name: {suggestedName}", EditorStyles.miniLabel);
-                
+
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.Space(2);
             }
-            
+
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space(10);
         }
@@ -505,18 +540,18 @@ namespace Microsoft.Unity.VisualStudio.Editor
                     // Icon
                     var obj = AssetDatabase.LoadAssetAtPath<Object>(assetPath);
                     var icon = AssetDatabase.GetCachedIcon(assetPath);
-                    
+
                     GUILayout.BeginHorizontal(GUILayout.Width(24));
                     if (icon != null)
                     {
                         GUILayout.Label(icon, GUILayout.Width(20), GUILayout.Height(20));
                     }
                     GUILayout.EndHorizontal();
-                    
+
                     // Path (with word wrap and flexible width)
-                    EditorGUILayout.LabelField(assetPath, EditorStyles.wordWrappedLabel, 
+                    EditorGUILayout.LabelField(assetPath, EditorStyles.wordWrappedLabel,
                         GUILayout.ExpandWidth(true));
-                    
+
                     // Buttons
                     GUILayout.BeginHorizontal(GUILayout.Width(130));
                     if (obj != null)
@@ -526,7 +561,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
                             Selection.activeObject = obj;
                             EditorGUIUtility.PingObject(obj);
                         }
-                        
+
                         if (showDelete && GUILayout.Button("Delete", _buttonStyle))
                         {
                             if (EditorUtility.DisplayDialog("Delete Asset",
