@@ -12,15 +12,17 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
         private static Color _backgroundColor = new Color(0, 0, 0, 0.7f);
         private static Color _textColor = Color.white;
         private static int _targetFPS = 60;
+        private static PerformanceAnalyzer _analyzer;
 
         // Initialize the overlay
         static PerformanceOverlay()
         {
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-            SceneView.duringSceneGui += OnSceneGUI;
+            EditorApplication.update += OnUpdate;
+            _analyzer = new PerformanceAnalyzer();
         }
 
-        [MenuItem("Window/Visual Studio/Performance Tools/Toggle FPS Overlay %#f")]
+        [MenuItem("Window/Visual Studio/Performance Tools/Toggle FPS Overlay %#f")] // Ctrl+Shift+F or Cmd+Shift+F
         public static void ToggleOverlay()
         {
             _showOverlay = !_showOverlay;
@@ -30,87 +32,108 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
         {
             if (state == PlayModeStateChange.EnteredPlayMode)
             {
-                PerformanceAnalyzer.StartRecording();
-                EditorApplication.update += UpdateOverlay;
+                _showOverlay = true;
+                InitializeGUIStyle();
             }
             else if (state == PlayModeStateChange.ExitingPlayMode)
             {
-                PerformanceAnalyzer.StopRecording();
-                EditorApplication.update -= UpdateOverlay;
+                _showOverlay = false;
             }
         }
 
-        private static void UpdateOverlay()
-        {
-            if (_showOverlay)
-            {
-                PerformanceAnalyzer.Update();
-                EditorWindow.GetWindow<SceneView>()?.Repaint();
-            }
-        }
-
-        private static void OnSceneGUI(SceneView sceneView)
-        {
-            if (!_showOverlay || !EditorApplication.isPlaying) return;
-
-            InitializeStyles();
-
-            Handles.BeginGUI();
-
-            // Draw background
-            GUI.color = _backgroundColor;
-            GUI.Box(_windowRect, GUIContent.none);
-            GUI.color = Color.white;
-
-            GUILayout.BeginArea(_windowRect);
-            {
-                var metrics = PerformanceAnalyzer.CurrentMetrics;
-                if (metrics != null)
-                {
-                    _labelStyle.normal.textColor = GetFPSColor(metrics.FPS);
-                    GUILayout.Label($"FPS: {metrics.FPS:F1}", _labelStyle);
-
-                    _labelStyle.normal.textColor = _textColor;
-                    GUILayout.Label($"Frame Time: {metrics.FrameTime:F1}ms", _labelStyle);
-                    GUILayout.Label($"Draw Calls: {metrics.DrawCalls}", _labelStyle);
-                    GUILayout.Label($"Memory: {metrics.TotalMemory:F1}MB", _labelStyle);
-                }
-                else
-                {
-                    GUILayout.Label("Collecting data...", _labelStyle);
-                }
-            }
-            GUILayout.EndArea();
-
-            Handles.EndGUI();
-        }
-
-        private static void InitializeStyles()
+        private static void InitializeGUIStyle()
         {
             if (_labelStyle == null)
             {
-                _labelStyle = new GUIStyle(EditorStyles.label)
+                _labelStyle = new GUIStyle(GUI.skin.label)
                 {
-                    fontSize = 12,
+                    fontSize = 14,
                     fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleLeft,
-                    padding = new RectOffset(5, 5, 2, 2)
+                    alignment = TextAnchor.MiddleLeft
                 };
                 _labelStyle.normal.textColor = _textColor;
             }
         }
 
-        private static Color GetFPSColor(float fps)
+        private static void OnUpdate()
         {
-            if (fps >= _targetFPS) return Color.green;
-            if (fps >= _targetFPS * 0.5f) return Color.yellow;
-            return Color.red;
+            if (_showOverlay && EditorApplication.isPlaying)
+            {
+                // Force repaint of Game view
+                var gameView = EditorWindow.GetWindow(typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView"));
+                if (gameView != null)
+                {
+                    gameView.Repaint();
+                }
+            }
         }
 
-        // Make the window draggable
-        private void DragWindow(int windowID)
+        [InitializeOnLoadMethod]
+        static void RegisterGameViewCallback()
         {
-            GUI.DragWindow();
+            EditorApplication.update += () =>
+            {
+                if (_showOverlay && EditorApplication.isPlaying)
+                {
+                    var gameView = EditorWindow.GetWindow(typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView"));
+                    if (gameView != null)
+                    {
+                        gameView.wantsMouseMove = true;
+                        gameView.Repaint();
+                    }
+                }
+            };
+        }
+
+        private static void DrawOverlay()
+        {
+            if (!_showOverlay || !EditorApplication.isPlaying) return;
+
+            var metrics = _analyzer.GetCurrentMetrics();
+            
+            // Draw background
+            EditorGUI.DrawRect(_windowRect, _backgroundColor);
+
+            // Prepare GUI
+            GUILayout.BeginArea(_windowRect);
+            {
+                // FPS Color based on performance
+                Color fpsColor = metrics.FPS >= _targetFPS ? Color.green :
+                               metrics.FPS >= _targetFPS * 0.5f ? Color.yellow :
+                               Color.red;
+
+                _labelStyle.normal.textColor = fpsColor;
+                GUILayout.Label($"FPS: {metrics.FPS:F1}", _labelStyle);
+
+                _labelStyle.normal.textColor = _textColor;
+                GUILayout.Label($"Frame Time: {metrics.FrameTime:F1}ms", _labelStyle);
+                GUILayout.Label($"Draw Calls: {metrics.DrawCalls}", _labelStyle);
+                GUILayout.Label($"Memory: {metrics.TotalMemory:F1}MB", _labelStyle);
+            }
+            GUILayout.EndArea();
+        }
+
+        [InitializeOnLoadMethod]
+        private static void RegisterGameViewGUI()
+        {
+            // Subscribe to Game view's OnGUI
+            EditorApplication.update += () =>
+            {
+                if (_showOverlay && EditorApplication.isPlaying)
+                {
+                    var gameViewType = typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView");
+                    var gameView = EditorWindow.GetWindow(gameViewType);
+                    if (gameView != null)
+                    {
+                        var onGUIMethod = gameViewType.GetMethod("OnGUI", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                        if (onGUIMethod != null)
+                        {
+                            DrawOverlay();
+                            gameView.Repaint();
+                        }
+                    }
+                }
+            };
         }
     }
 } 
