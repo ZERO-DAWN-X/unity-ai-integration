@@ -45,6 +45,11 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
         private void OnDisable()
         {
             EditorApplication.update -= OnUpdate;
+            if (_isRecording)
+            {
+                PerformanceAnalyzer.StopRecording();
+                _isRecording = false;
+            }
         }
 
         private void InitializeStyles()
@@ -137,6 +142,10 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
             if (GUILayout.Button(_isRecording ? "Stop" : "Record", EditorStyles.toolbarButton))
             {
                 _isRecording = !_isRecording;
+                if (_isRecording)
+                    PerformanceAnalyzer.StartRecording();
+                else
+                    PerformanceAnalyzer.StopRecording();
             }
 
             if (GUILayout.Button("Clear", EditorStyles.toolbarButton))
@@ -235,7 +244,7 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
                 EditorGUILayout.LabelField($"{metrics.VertexCount:N0}", _valueStyle);
                 EditorGUILayout.EndHorizontal();
 
-                DrawGraph(PerformanceAnalyzer.History.Select(m => m.DrawCalls).ToArray(), 0, Mathf.Max(metrics.DrawCalls * 1.2f));
+                DrawGraph(PerformanceAnalyzer.History.Select(m => (float)m.DrawCalls).ToArray(), 0, Mathf.Max(metrics.DrawCalls * 1.2f));
             }
 
             EditorGUILayout.EndVertical();

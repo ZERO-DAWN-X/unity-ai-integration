@@ -35,9 +35,26 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
         private static float _deltaTime;
         private static float _updateInterval = 1.0f;
         private static float _timeSinceLastUpdate;
+        private static ProfilerRecorder _physicsRecorder;
+        private static ProfilerRecorder _animationRecorder;
+        private static ProfilerRecorder _scriptsRecorder;
 
         public static PerformanceMetrics CurrentMetrics { get; private set; }
         public static IEnumerable<PerformanceMetrics> History => MetricsHistory;
+
+        public static void StartRecording()
+        {
+            _physicsRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Physics, "Physics.Simulate");
+            _animationRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Animation, "Animation.Update");
+            _scriptsRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, "MonoBehaviour.Update");
+        }
+
+        public static void StopRecording()
+        {
+            _physicsRecorder.Dispose();
+            _animationRecorder.Dispose();
+            _scriptsRecorder.Dispose();
+        }
 
         public static void Update()
         {
@@ -74,33 +91,10 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
             metrics.GCMemory = currentGCMemory - _lastGCMemory;
             _lastGCMemory = currentGCMemory;
 
-            // Track physics time using Profiler
-            Profiler.BeginSample("Physics");
-            Physics.Simulate(Time.fixedDeltaTime);
-            Profiler.EndSample();
-            metrics.PhysicsTime = Profiler.GetLastSamplerTime();
-
-            // Track animation time
-            Profiler.BeginSample("Animation");
-            var animators = Object.FindObjectsOfType<Animator>();
-            foreach (var animator in animators)
-            {
-                if (animator.isActiveAndEnabled)
-                    animator.Update(0);
-            }
-            Profiler.EndSample();
-            metrics.AnimationTime = Profiler.GetLastSamplerTime();
-
-            // Track script execution time
-            Profiler.BeginSample("Scripts");
-            var behaviours = Object.FindObjectsOfType<MonoBehaviour>();
-            foreach (var behaviour in behaviours)
-            {
-                if (behaviour.isActiveAndEnabled)
-                    behaviour.enabled = behaviour.enabled;
-            }
-            Profiler.EndSample();
-            metrics.ScriptTime = Profiler.GetLastSamplerTime();
+            // Get profiler timings
+            metrics.PhysicsTime = (float)_physicsRecorder.LastValue * 0.001f; // Convert ns to ms
+            metrics.AnimationTime = (float)_animationRecorder.LastValue * 0.001f;
+            metrics.ScriptTime = (float)_scriptsRecorder.LastValue * 0.001f;
 
             CurrentMetrics = metrics;
             MetricsHistory.Enqueue(metrics);
