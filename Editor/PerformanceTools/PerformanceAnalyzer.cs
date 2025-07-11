@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Profiling;
+using UnityEditor;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -75,11 +76,11 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
                 TotalMemory = Profiler.GetTotalReservedMemoryLong() / MemoryDivider,
                 AllocatedMemory = Profiler.GetTotalAllocatedMemoryLong() / MemoryDivider,
                 MonoMemory = Profiler.GetMonoUsedSizeLong() / MemoryDivider,
-                DrawCalls = UnityStats.drawCalls,
-                VertexCount = UnityStats.vertices,
-                BatchCount = UnityStats.batches,
-                GpuTime = UnityStats.gpuTime,
-                CpuFrameTime = UnityStats.renderTime,
+                DrawCalls = UnityEditorInternal.RenderStatistics.drawCalls,
+                VertexCount = UnityEditorInternal.RenderStatistics.vertices,
+                BatchCount = UnityEditorInternal.RenderStatistics.batches,
+                GpuTime = UnityEditorInternal.RenderStatistics.gpuTime,
+                CpuFrameTime = UnityEditorInternal.RenderStatistics.renderTime,
                 ActiveGameObjects = Object.FindObjectsOfType<GameObject>().Length,
                 TotalComponents = Object.FindObjectsOfType<Component>().Length
             };
