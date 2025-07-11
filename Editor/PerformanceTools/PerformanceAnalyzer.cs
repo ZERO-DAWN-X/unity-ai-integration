@@ -35,25 +35,23 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
         private static float _deltaTime;
         private static float _updateInterval = 1.0f;
         private static float _timeSinceLastUpdate;
-        private static ProfilerRecorder _physicsRecorder;
-        private static ProfilerRecorder _animationRecorder;
-        private static ProfilerRecorder _scriptsRecorder;
+        private static float _lastPhysicsTime;
+        private static float _lastAnimationTime;
+        private static float _lastScriptTime;
 
         public static PerformanceMetrics CurrentMetrics { get; private set; }
         public static IEnumerable<PerformanceMetrics> History => MetricsHistory;
 
         public static void StartRecording()
         {
-            _physicsRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Physics, "Physics.Simulate");
-            _animationRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Animation, "Animation.Update");
-            _scriptsRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, "MonoBehaviour.Update");
+            _lastPhysicsTime = Time.realtimeSinceStartup;
+            _lastAnimationTime = Time.realtimeSinceStartup;
+            _lastScriptTime = Time.realtimeSinceStartup;
         }
 
         public static void StopRecording()
         {
-            _physicsRecorder.Dispose();
-            _animationRecorder.Dispose();
-            _scriptsRecorder.Dispose();
+            // No cleanup needed for built-in profiling
         }
 
         public static void Update()
@@ -91,10 +89,26 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
             metrics.GCMemory = currentGCMemory - _lastGCMemory;
             _lastGCMemory = currentGCMemory;
 
-            // Get profiler timings
-            metrics.PhysicsTime = (float)_physicsRecorder.LastValue * 0.001f; // Convert ns to ms
-            metrics.AnimationTime = (float)_animationRecorder.LastValue * 0.001f;
-            metrics.ScriptTime = (float)_scriptsRecorder.LastValue * 0.001f;
+            // Track physics time
+            Profiler.BeginSample("Physics");
+            float currentPhysicsTime = Time.realtimeSinceStartup;
+            metrics.PhysicsTime = (currentPhysicsTime - _lastPhysicsTime) * 1000f; // Convert to ms
+            _lastPhysicsTime = currentPhysicsTime;
+            Profiler.EndSample();
+
+            // Track animation time
+            Profiler.BeginSample("Animation");
+            float currentAnimationTime = Time.realtimeSinceStartup;
+            metrics.AnimationTime = (currentAnimationTime - _lastAnimationTime) * 1000f;
+            _lastAnimationTime = currentAnimationTime;
+            Profiler.EndSample();
+
+            // Track script time
+            Profiler.BeginSample("Scripts");
+            float currentScriptTime = Time.realtimeSinceStartup;
+            metrics.ScriptTime = (currentScriptTime - _lastScriptTime) * 1000f;
+            _lastScriptTime = currentScriptTime;
+            Profiler.EndSample();
 
             CurrentMetrics = metrics;
             MetricsHistory.Enqueue(metrics);
