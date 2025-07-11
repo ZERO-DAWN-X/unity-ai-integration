@@ -31,7 +31,11 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
         private const float MIN_WINDOW_WIDTH = 450f;
         private const float MIN_WINDOW_HEIGHT = 300f;
-        private const float TOOLBAR_HEIGHT = 30f;
+        private const float TOOLBAR_HEIGHT = 22f;
+        private const float TOOLBAR_PADDING = 5f;
+        private const float TOOLBAR_BUTTON_WIDTH = 80f;
+        private const float TOOLBAR_BUTTON_SPACING = 2f;
+        private const float TOOLBAR_GROUP_SPACING = 10f;
         private const float SECTION_SPACING = 10f;
         private const float ITEM_SPACING = 5f;
 
@@ -105,17 +109,17 @@ namespace Microsoft.Unity.VisualStudio.Editor
             // Toolbar button style
             _toolbarButtonStyle = new GUIStyle(EditorStyles.toolbarButton)
             {
-                fontSize = 12,
-                fixedHeight = 25,
-                margin = new RectOffset(5, 5, 5, 5),
-                padding = new RectOffset(10, 10, 5, 5)
+                padding = new RectOffset(5, 5, 2, 2),
+                fixedHeight = TOOLBAR_HEIGHT - 4,
+                alignment = TextAnchor.MiddleCenter
             };
 
             // Toggle style
-            _toggleStyle = new GUIStyle(EditorStyles.toggle)
+            _toggleStyle = new GUIStyle(EditorStyles.toolbarButton)
             {
-                fontSize = 12,
-                margin = new RectOffset(10, 10, 5, 5)
+                padding = new RectOffset(5, 5, 2, 2),
+                fixedHeight = TOOLBAR_HEIGHT - 4,
+                alignment = TextAnchor.MiddleLeft
             };
 
             // Create background texture
@@ -210,56 +214,71 @@ namespace Microsoft.Unity.VisualStudio.Editor
         private void DrawToolbar()
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar, GUILayout.Height(TOOLBAR_HEIGHT));
+            GUILayout.Space(TOOLBAR_PADDING);
+
+            // Left group - Main actions
+            EditorGUILayout.BeginHorizontal(GUILayout.MaxWidth(TOOLBAR_BUTTON_WIDTH * 3 + TOOLBAR_BUTTON_SPACING * 2));
+            if (GUILayout.Button("Analyze", _toolbarButtonStyle, GUILayout.Width(TOOLBAR_BUTTON_WIDTH)))
             {
-                // Left side buttons
-                GUILayout.BeginHorizontal(GUILayout.Width(position.width * 0.6f));
-                {
-                    if (GUILayout.Button(new GUIContent(" Analyze", EditorGUIUtility.IconContent("d_Refresh").image),
-                        _toolbarButtonStyle, GUILayout.Width(80)))
-                    {
-                        RunAnalysis();
-                    }
-
-                    if (GUILayout.Button(new GUIContent(" Optimize", EditorGUIUtility.IconContent("d_Settings").image),
-                        _toolbarButtonStyle, GUILayout.Width(80)))
-                    {
-                        if (EditorUtility.DisplayDialog("Optimize Assets",
-                            "This will modify import settings for assets in your project. Continue?",
-                            "Optimize", "Cancel"))
-                        {
-                            AssetOptimizer.OptimizeAssetImportSettings();
-                        }
-                    }
-
-                    if (GUILayout.Button(new GUIContent(" Refresh", EditorGUIUtility.IconContent("d_Refresh").image),
-                        _toolbarButtonStyle, GUILayout.Width(80)))
-                    {
-                        RefreshData();
-                    }
-                }
-                GUILayout.EndHorizontal();
-
-                // Right side search
-                GUILayout.FlexibleSpace();
-
-                GUILayout.BeginHorizontal(GUILayout.Width(220));
-                {
-                    GUILayout.Label(EditorGUIUtility.IconContent("d_Search Icon"), GUILayout.Width(20));
-                    _searchFilter = EditorGUILayout.TextField(_searchFilter, _searchStyle);
-                    if (!string.IsNullOrEmpty(_searchFilter) && GUILayout.Button("×", EditorStyles.label, GUILayout.Width(20)))
-                    {
-                        _searchFilter = "";
-                        GUI.FocusControl(null);
-                    }
-                }
-                GUILayout.EndHorizontal();
+                AnalyzeAssets();
             }
+            GUILayout.Space(TOOLBAR_BUTTON_SPACING);
+            if (GUILayout.Button("Optimize", _toolbarButtonStyle, GUILayout.Width(TOOLBAR_BUTTON_WIDTH)))
+            {
+                OptimizeAssets();
+            }
+            GUILayout.Space(TOOLBAR_BUTTON_SPACING);
+            if (GUILayout.Button("Refresh", _toolbarButtonStyle, GUILayout.Width(TOOLBAR_BUTTON_WIDTH)))
+            {
+                RefreshAnalysis();
+            }
+            EditorGUILayout.EndHorizontal();
+
+            GUILayout.Space(TOOLBAR_GROUP_SPACING);
+
+            // Center group - Toggle buttons
+            EditorGUILayout.BeginHorizontal();
+            _showUnusedAssets = GUILayout.Toggle(_showUnusedAssets, new GUIContent(" Show Unused", EditorGUIUtility.IconContent("TreeEditor.Trash").image), _toggleStyle);
+            GUILayout.Space(TOOLBAR_BUTTON_SPACING);
+            _showDependencies = GUILayout.Toggle(_showDependencies, new GUIContent(" Dependencies", EditorGUIUtility.IconContent("d_GraphicsInfo").image), _toggleStyle);
+            GUILayout.Space(TOOLBAR_BUTTON_SPACING);
+            _showNamingIssues = GUILayout.Toggle(_showNamingIssues, new GUIContent(" Naming Issues", EditorGUIUtility.IconContent("FilterByLabel").image), _toggleStyle);
+            EditorGUILayout.EndHorizontal();
+
+            GUILayout.FlexibleSpace();
+
+            // Right group - Search
+            EditorGUILayout.BeginHorizontal(GUILayout.MaxWidth(200));
+            _searchFilter = EditorGUILayout.TextField(_searchFilter, _searchStyle);
+            if (GUILayout.Button("×", EditorStyles.label, GUILayout.Width(20)) && !string.IsNullOrEmpty(_searchFilter))
+            {
+                _searchFilter = "";
+                GUI.FocusControl(null);
+            }
+            GUILayout.Space(TOOLBAR_PADDING);
+            EditorGUILayout.EndHorizontal();
+
             EditorGUILayout.EndHorizontal();
         }
 
-        private void RunAnalysis()
+        private void AnalyzeAssets()
         {
             AssetAnalyzer.AnalyzeProjectAssets();
+            RefreshData();
+        }
+
+        private void OptimizeAssets()
+        {
+            if (EditorUtility.DisplayDialog("Optimize Assets",
+                "This will modify import settings for assets in your project. Continue?",
+                "Optimize", "Cancel"))
+            {
+                AssetOptimizer.OptimizeAssetImportSettings();
+            }
+        }
+
+        private void RefreshAnalysis()
+        {
             RefreshData();
         }
 
