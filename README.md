@@ -93,7 +93,7 @@ YourProject/
 
 ### Version 2.0.24+ Important Update
 
-The package name changed from `com.unity.ide.cursor` to `com.boxqkrtm.ide.cursor` to comply with Unity's attribution guidelines.
+The package name changed from `com.unity.ide.cursor` to `com.zerodawnx.ide.cursor` to comply with Unity's attribution guidelines.
 
 **If updating from older versions:**
 1. Remove the existing package first

@@ -1,5 +1,5 @@
 {
-  "name": "com.boxqkrtm.ide.cursor",
+  "name": "com.zerodawnx.ide.cursor",
   "displayName": "Cursor AI Editor",
   "description": "Enhanced Unity integration for Cursor AI Editor. Features intelligent code completion, project management, and seamless debugging capabilities. Based on the original work by boxqkrtm.",
   "version": "2.0.25",
