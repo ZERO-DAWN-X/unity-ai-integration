@@ -72,8 +72,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
             else
             {
                 // Check texture size
-                var textureSettings = new TextureImporterPlatformSettings();
-                importer.GetPlatformTextureSettings("Standalone", out textureSettings);
+                var textureSettings = importer.GetPlatformTextureSettings("Standalone");
                 
                 if (textureSettings.maxTextureSize > 2048)
                 {
