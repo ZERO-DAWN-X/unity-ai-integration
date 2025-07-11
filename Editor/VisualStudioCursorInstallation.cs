@@ -217,9 +217,6 @@ namespace Microsoft.Unity.VisualStudio.Editor {
 				CreateRecommendedExtensionsFile(vscodeDirectory, enablePatch);
 				CreateSettingsFile(vscodeDirectory, enablePatch);
 				CreateLaunchFile(vscodeDirectory, enablePatch);
-				
-				// Create performance monitoring configuration files
-				CreatePerformanceMonitoringFiles(vscodeDirectory);
 			} catch (IOException) {
 			}
 		}
@@ -552,64 +549,6 @@ namespace Microsoft.Unity.VisualStudio.Editor {
 		}
 
 		public static void Initialize() {
-		}
-		
-		private static void CreatePerformanceMonitoringFiles(string vscodeDirectory) {
-			try {
-				// Create performance monitor configuration
-				var performanceConfig = @"{
-  ""unity.performanceMonitor.enabled"": true,
-  ""unity.performanceMonitor.updateInterval"": 500,
-  ""unity.performanceMonitor.showInStatusBar"": true,
-  ""unity.performanceMonitor.alerts.enabled"": true,
-  ""unity.performanceMonitor.thresholds"": {
-    ""minFPS"": 30,
-    ""maxFrameTime"": 33.33,
-    ""maxMemoryMB"": 1024,
-    ""maxDrawCalls"": 1000
-  }
-}";
-				
-				var performanceConfigFile = IOPath.Combine(vscodeDirectory, "unity-performance-config.json");
-				if (!File.Exists(performanceConfigFile)) {
-					File.WriteAllText(performanceConfigFile, performanceConfig);
-				}
-				
-				// Create performance monitor README
-				var performanceReadme = @"# Unity Performance Monitor for Cursor
-
-This directory contains configuration files for the Unity Performance Monitor extension.
-
-## Files:
-- `unity-performance.json` - Real-time performance data (auto-generated)
-- `unity-performance-alerts.json` - Performance alerts and warnings (auto-generated) 
-- `unity-performance-config.json` - Configuration settings for monitoring
-- `unity-performance-thresholds.json` - Custom performance thresholds (auto-generated)
-
-## Features:
-- Real-time FPS monitoring in status bar
-- Memory usage tracking
-- Draw call optimization alerts
-- Performance regression warnings
-- Automatic performance suggestions
-
-## Installation:
-To install the Cursor Performance Extension:
-1. Open Unity Editor
-2. Go to 'Window > Unity Cursor Integration > Install Performance Extension'
-3. Restart Cursor to activate the extension
-
-The extension will automatically display Unity performance metrics in your Cursor status bar and send alerts when performance thresholds are exceeded.
-";
-				
-				var readmeFile = IOPath.Combine(vscodeDirectory, "PERFORMANCE_MONITOR_README.md");
-				if (!File.Exists(readmeFile)) {
-					File.WriteAllText(readmeFile, performanceReadme);
-				}
-				
-			} catch (Exception e) {
-				Debug.LogWarning($"Failed to create performance monitoring files: {e.Message}");
-			}
 		}
 	}
 }
