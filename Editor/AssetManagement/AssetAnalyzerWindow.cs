@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 
 namespace Microsoft.Unity.VisualStudio.Editor
 {
@@ -53,39 +54,55 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
         private void InitializeStyles()
         {
+            if (_headerStyle != null) return; // Styles already initialized
+
             _backgroundColor = EditorGUIUtility.isProSkin ? 
                 new Color(0.22f, 0.22f, 0.22f) : 
                 new Color(0.85f, 0.85f, 0.85f);
 
-            _headerStyle = new GUIStyle(EditorStyles.boldLabel);
-            _headerStyle.fontSize = 16;
-            _headerStyle.margin = new RectOffset(10, 10, 15, 5);
-            _headerStyle.normal.textColor = EditorGUIUtility.isProSkin ? 
-                new Color(0.9f, 0.9f, 0.9f) : 
-                new Color(0.2f, 0.2f, 0.2f);
+            _headerStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 16,
+                margin = new RectOffset(10, 10, 15, 5),
+                normal = { textColor = EditorGUIUtility.isProSkin ? 
+                    new Color(0.9f, 0.9f, 0.9f) : 
+                    new Color(0.2f, 0.2f, 0.2f) }
+            };
 
-            _sectionStyle = new GUIStyle(EditorStyles.boldLabel);
-            _sectionStyle.fontSize = 13;
-            _sectionStyle.margin = new RectOffset(5, 5, 10, 5);
+            _sectionStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 13,
+                margin = new RectOffset(5, 5, 10, 5)
+            };
             
-            _cardStyle = new GUIStyle(EditorStyles.helpBox);
-            _cardStyle.padding = new RectOffset(10, 10, 10, 10);
-            _cardStyle.margin = new RectOffset(5, 5, 5, 5);
+            _cardStyle = new GUIStyle(EditorStyles.helpBox)
+            {
+                padding = new RectOffset(10, 10, 10, 10),
+                margin = new RectOffset(5, 5, 5, 5)
+            };
 
             _buttonStyle = new GUIStyle(GUI.skin.button);
             _buttonStyle.normal.textColor = Color.white;
             _buttonStyle.hover.textColor = Color.white;
             _buttonStyle.active.textColor = Color.white;
             
-            _searchStyle = new GUIStyle(EditorStyles.toolbarSearchField);
-            _searchStyle.margin = new RectOffset(10, 10, 5, 5);
+            _searchStyle = new GUIStyle(EditorStyles.toolbarSearchField)
+            {
+                margin = new RectOffset(10, 10, 5, 5)
+            };
             
-            _toggleStyle = new GUIStyle(EditorStyles.toggle);
-            _toggleStyle.margin = new RectOffset(10, 10, 5, 5);
+            _toggleStyle = new GUIStyle(EditorStyles.toggle)
+            {
+                margin = new RectOffset(10, 10, 5, 5)
+            };
             
-            _toolbarStyle = new GUIStyle(EditorStyles.toolbar);
-            _toolbarStyle.fixedHeight = 35;
-            _toolbarStyle.padding = new RectOffset(5, 5, 5, 5);
+            _toolbarStyle = new GUIStyle(EditorStyles.toolbar)
+            {
+                fixedHeight = 35,
+                padding = new RectOffset(5, 5, 5, 5)
+            };
+
+            _toggleLabelStyle = new GUIStyle(EditorStyles.label);
         }
 
         private void OnGUI()
@@ -185,11 +202,14 @@ namespace Microsoft.Unity.VisualStudio.Editor
                 EditorGUI.DrawRect(rect, color);
             }
 
-            var style = new GUIStyle(EditorStyles.label);
-            style.normal.textColor = value || isHover ? Color.white : new Color(0.8f, 0.8f, 0.8f);
+            if (_toggleLabelStyle == null)
+            {
+                _toggleLabelStyle = new GUIStyle(EditorStyles.label);
+            }
+            _toggleLabelStyle.normal.textColor = value || isHover ? Color.white : new Color(0.8f, 0.8f, 0.8f);
             
             GUI.Label(new Rect(rect.x + 5, rect.y + 4, 16, 16), icon);
-            GUI.Label(new Rect(rect.x + 25, rect.y + 4, rect.width - 30, 16), label, style);
+            GUI.Label(new Rect(rect.x + 25, rect.y + 4, rect.width - 30, 16), label, _toggleLabelStyle);
 
             if (Event.current.type == EventType.MouseDown && rect.Contains(Event.current.mousePosition))
             {
@@ -200,6 +220,8 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
             return value;
         }
+
+        private GUIStyle _toggleLabelStyle;
 
         private void DrawMainContent()
         {
@@ -321,50 +343,24 @@ namespace Microsoft.Unity.VisualStudio.Editor
                     !asset.Key.ToLower().Contains(_searchFilter.ToLower()))
                     continue;
 
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                
-                EditorGUILayout.BeginHorizontal();
-                var obj = AssetDatabase.LoadAssetAtPath<Object>(asset.Key);
-                var icon = AssetDatabase.GetCachedIcon(asset.Key);
-                GUILayout.Label(icon, GUILayout.Width(20), GUILayout.Height(20));
-                EditorGUILayout.LabelField(asset.Key, EditorStyles.boldLabel);
-                
-                if (GUILayout.Button(new GUIContent(" Select", EditorGUIUtility.IconContent("d_ViewToolZoom").image),
-                    GUILayout.Width(80)))
-                {
-                    Selection.activeObject = obj;
-                    EditorGUIUtility.PingObject(obj);
-                }
-                EditorGUILayout.EndHorizontal();
-
+                DrawAssetEntry(asset.Key, false);
                 EditorGUI.indentLevel++;
-                if (asset.Value.Any())
+                
+                if (asset.Value.Count > 0)
                 {
                     foreach (var dependency in asset.Value)
                     {
-                        EditorGUILayout.BeginHorizontal();
-                        var depObj = AssetDatabase.LoadAssetAtPath<Object>(dependency);
-                        var depIcon = AssetDatabase.GetCachedIcon(dependency);
-                        GUILayout.Space(20);
-                        GUILayout.Label(depIcon, GUILayout.Width(20), GUILayout.Height(20));
-                        EditorGUILayout.LabelField(dependency);
-                        
-                        if (GUILayout.Button(new GUIContent(" Select", EditorGUIUtility.IconContent("d_ViewToolZoom").image),
-                            GUILayout.Width(80)))
-                        {
-                            Selection.activeObject = depObj;
-                            EditorGUIUtility.PingObject(depObj);
-                        }
-                        EditorGUILayout.EndHorizontal();
+                        EditorGUILayout.LabelField($"→ {Path.GetFileName(dependency)}", 
+                            new GUIStyle(EditorStyles.label) { fontSize = 10 });
                     }
                 }
                 else
                 {
-                    EditorGUILayout.LabelField("No dependencies");
+                    EditorGUILayout.LabelField("No dependencies", 
+                        new GUIStyle(EditorStyles.label) { fontSize = 10 });
                 }
+                
                 EditorGUI.indentLevel--;
-
-                EditorGUILayout.EndVertical();
                 EditorGUILayout.Space(5);
             }
 
@@ -416,97 +412,101 @@ namespace Microsoft.Unity.VisualStudio.Editor
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawEmptyState(string title, string message, string iconName = "d_console.infoicon")
+        private void DrawAssetEntry(string assetPath, bool isUnused)
         {
-            EditorGUILayout.Space(10);
-            EditorGUILayout.BeginVertical();
+            EditorGUILayout.BeginHorizontal();
             
-            var icon = EditorGUIUtility.IconContent(iconName).image;
-            var iconRect = GUILayoutUtility.GetRect(32, 32);
-            iconRect.x = (position.width - 32) / 2;
-            GUI.DrawTexture(iconRect, icon);
-            
-            var titleStyle = new GUIStyle(EditorStyles.boldLabel);
-            titleStyle.alignment = TextAnchor.MiddleCenter;
-            titleStyle.fontSize = 14;
-            
-            var messageStyle = new GUIStyle(EditorStyles.label);
-            messageStyle.alignment = TextAnchor.MiddleCenter;
-            messageStyle.normal.textColor = Color.gray;
-            
-            EditorGUILayout.Space(5);
-            EditorGUILayout.LabelField(title, titleStyle);
-            EditorGUILayout.LabelField(message, messageStyle);
-            
-            EditorGUILayout.Space(10);
-            EditorGUILayout.EndVertical();
-        }
-
-        private void DrawAssetEntry(string assetPath, bool isUnused = false)
-        {
-            EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
-
-            // Asset icon and info
-            var obj = AssetDatabase.LoadAssetAtPath<Object>(assetPath);
+            // Draw icon based on asset type
             var icon = AssetDatabase.GetCachedIcon(assetPath);
-            GUILayout.Label(icon, GUILayout.Width(20), GUILayout.Height(20));
+            if (icon != null)
+            {
+                GUILayout.Label(icon, GUILayout.Width(20), GUILayout.Height(20));
+            }
             
+            // Draw asset name and path
             EditorGUILayout.BeginVertical();
-            EditorGUILayout.LabelField(System.IO.Path.GetFileName(assetPath), EditorStyles.boldLabel);
-            EditorGUILayout.LabelField(assetPath, EditorStyles.miniLabel);
+            EditorGUILayout.LabelField(Path.GetFileName(assetPath), 
+                new GUIStyle(EditorStyles.boldLabel) { fontSize = 12 });
+            EditorGUILayout.LabelField(assetPath, 
+                new GUIStyle(EditorStyles.miniLabel) { fontSize = 9 });
             EditorGUILayout.EndVertical();
 
-            // Buttons
-            EditorGUILayout.BeginHorizontal(GUILayout.Width(160));
-            if (GUILayout.Button(new GUIContent(" Select", EditorGUIUtility.IconContent("d_ViewToolZoom").image),
-                GUILayout.Width(80)))
+            if (isUnused)
             {
-                Selection.activeObject = obj;
-                EditorGUIUtility.PingObject(obj);
-            }
-
-            if (isUnused && GUILayout.Button(new GUIContent(" Delete", EditorGUIUtility.IconContent("d_TreeEditor.Trash").image),
-                GUILayout.Width(80)))
-            {
-                if (EditorUtility.DisplayDialog("Delete Asset",
-                    $"Are you sure you want to delete {System.IO.Path.GetFileName(assetPath)}?",
-                    "Delete", "Cancel"))
+                if (GUILayout.Button(EditorGUIUtility.IconContent("d_TreeEditor.Trash"), 
+                    GUILayout.Width(25), GUILayout.Height(25)))
                 {
-                    AssetDatabase.DeleteAsset(assetPath);
-                    AssetDatabase.Refresh();
-                    RefreshData();
+                    if (EditorUtility.DisplayDialog("Delete Asset",
+                        $"Are you sure you want to delete {Path.GetFileName(assetPath)}?",
+                        "Delete", "Cancel"))
+                    {
+                        AssetDatabase.DeleteAsset(assetPath);
+                        AssetDatabase.Refresh();
+                    }
                 }
             }
+            
             EditorGUILayout.EndHorizontal();
+        }
 
+        private void DrawEmptyState(string title, string message, string iconName = "d_console.infoicon")
+        {
+            EditorGUILayout.Space(20);
+            EditorGUILayout.BeginVertical();
+            GUILayout.FlexibleSpace();
+            
+            var centeredStyle = new GUIStyle(EditorStyles.label) { alignment = TextAnchor.MiddleCenter };
+            
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            GUILayout.Label(EditorGUIUtility.IconContent(iconName).image, 
+                GUILayout.Width(32), GUILayout.Height(32));
+            GUILayout.FlexibleSpace();
             EditorGUILayout.EndHorizontal();
+            
+            EditorGUILayout.Space(10);
+            EditorGUILayout.LabelField(title, new GUIStyle(centeredStyle) { fontSize = 14, fontStyle = FontStyle.Bold });
+            EditorGUILayout.LabelField(message, new GUIStyle(centeredStyle) { fontSize = 12 });
+            
+            GUILayout.FlexibleSpace();
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.Space(20);
         }
 
         private void DrawAnalysisProgress()
         {
-            var rect = new Rect(10, position.height - 30, position.width - 20, 20);
+            var rect = EditorGUILayout.GetControlRect(false, 20);
+            rect.x += 10;
+            rect.width -= 20;
+            
             EditorGUI.ProgressBar(rect, _analysisProgress, "Analyzing Assets...");
-            Repaint();
         }
 
         private void RunAnalysis()
         {
             _isAnalyzing = true;
             _analysisProgress = 0f;
-            EditorApplication.delayCall += () =>
+            
+            EditorApplication.update += UpdateAnalysis;
+            AssetAnalyzer.AnalyzeProjectAssets();
+            
+            _assetUsageStatus = AssetAnalyzer.GetAssetUsageStatus();
+            _assetDependencies = AssetAnalyzer.GetAssetDependencies();
+        }
+
+        private void UpdateAnalysis()
+        {
+            if (_isAnalyzing)
             {
-                try
-                {
-                    AssetAnalyzer.AnalyzeProjectAssets();
-                    RefreshData();
-                }
-                finally
+                _analysisProgress += 0.01f;
+                if (_analysisProgress >= 1f)
                 {
                     _isAnalyzing = false;
-                    _analysisProgress = 1f;
-                    Repaint();
+                    _analysisProgress = 0f;
+                    EditorApplication.update -= UpdateAnalysis;
                 }
-            };
+                Repaint();
+            }
         }
 
         private void RefreshData()
@@ -523,6 +523,25 @@ namespace Microsoft.Unity.VisualStudio.Editor
             {
                 DestroyImmediate(_gradientTexture);
             }
+        }
+
+        private void OnDisable()
+        {
+            if (_gradientTexture != null)
+            {
+                DestroyImmediate(_gradientTexture);
+                _gradientTexture = null;
+            }
+
+            // Clear styles
+            _headerStyle = null;
+            _sectionStyle = null;
+            _cardStyle = null;
+            _buttonStyle = null;
+            _searchStyle = null;
+            _toggleStyle = null;
+            _toolbarStyle = null;
+            _toggleLabelStyle = null;
         }
     }
 } 
