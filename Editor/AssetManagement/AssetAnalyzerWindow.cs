@@ -16,6 +16,8 @@ namespace Microsoft.Unity.VisualStudio.Editor
         private GUIStyle _sectionStyle;
         private List<string> _invalidNamedAssets;
         private bool _showOptimizationSettings = false;
+        private Dictionary<string, bool> _assetUsageStatus;
+        private Dictionary<string, List<string>> _assetDependencies;
 
         [MenuItem("Window/Asset Management/Asset Analyzer")]
         public static void ShowWindow()
@@ -51,8 +53,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
             
             if (GUILayout.Button("Analyze Assets", EditorStyles.toolbarButton))
             {
-                AssetAnalyzer.AnalyzeProjectAssets();
-                _invalidNamedAssets = AssetOptimizer.ValidateAssetNames();
+                RunAnalysis();
             }
 
             if (GUILayout.Button("Optimize Assets", EditorStyles.toolbarButton))
@@ -65,9 +66,28 @@ namespace Microsoft.Unity.VisualStudio.Editor
                 }
             }
 
+            if (GUILayout.Button("Refresh", EditorStyles.toolbarButton))
+            {
+                RefreshData();
+            }
+
             GUILayout.FlexibleSpace();
             _searchFilter = EditorGUILayout.TextField(_searchFilter, EditorStyles.toolbarSearchField);
             EditorGUILayout.EndHorizontal();
+        }
+
+        private void RunAnalysis()
+        {
+            AssetAnalyzer.AnalyzeProjectAssets();
+            RefreshData();
+        }
+
+        private void RefreshData()
+        {
+            _invalidNamedAssets = AssetOptimizer.ValidateAssetNames();
+            _assetUsageStatus = AssetAnalyzer.GetAssetUsageStatus();
+            _assetDependencies = AssetAnalyzer.GetAssetDependencies();
+            Repaint();
         }
 
         private void DrawOptions()
@@ -138,8 +158,27 @@ namespace Microsoft.Unity.VisualStudio.Editor
             EditorGUILayout.LabelField("Unused Assets", _headerStyle);
             EditorGUILayout.Space();
 
-            // Implementation will be added when we have data
-            EditorGUILayout.HelpBox("Run 'Analyze Assets' to find unused assets", MessageType.Info);
+            if (_assetUsageStatus == null || _assetUsageStatus.Count == 0)
+            {
+                EditorGUILayout.HelpBox("Run 'Analyze Assets' to find unused assets", MessageType.Info);
+                return;
+            }
+
+            var unusedAssets = _assetUsageStatus.Where(x => !x.Value).ToList();
+            if (unusedAssets.Count == 0)
+            {
+                EditorGUILayout.HelpBox("No unused assets found", MessageType.Info);
+                return;
+            }
+
+            foreach (var asset in unusedAssets)
+            {
+                if (!string.IsNullOrEmpty(_searchFilter) && 
+                    !asset.Key.ToLower().Contains(_searchFilter.ToLower()))
+                    continue;
+
+                DrawAssetEntry(asset.Key, true);
+            }
         }
 
         private void DrawDependencies()
@@ -147,8 +186,62 @@ namespace Microsoft.Unity.VisualStudio.Editor
             EditorGUILayout.LabelField("Asset Dependencies", _headerStyle);
             EditorGUILayout.Space();
 
-            // Implementation will be added when we have data
-            EditorGUILayout.HelpBox("Run 'Analyze Assets' to view dependencies", MessageType.Info);
+            if (_assetDependencies == null || _assetDependencies.Count == 0)
+            {
+                EditorGUILayout.HelpBox("Run 'Analyze Assets' to view dependencies", MessageType.Info);
+                return;
+            }
+
+            foreach (var asset in _assetDependencies.OrderBy(x => x.Key))
+            {
+                if (!string.IsNullOrEmpty(_searchFilter) && 
+                    !asset.Key.ToLower().Contains(_searchFilter.ToLower()))
+                    continue;
+
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                
+                EditorGUILayout.BeginHorizontal();
+                var obj = AssetDatabase.LoadAssetAtPath<Object>(asset.Key);
+                var icon = AssetDatabase.GetCachedIcon(asset.Key);
+                GUILayout.Label(icon, GUILayout.Width(20), GUILayout.Height(20));
+                EditorGUILayout.LabelField(asset.Key, EditorStyles.boldLabel);
+                
+                if (GUILayout.Button("Select", GUILayout.Width(60)))
+                {
+                    Selection.activeObject = obj;
+                    EditorGUIUtility.PingObject(obj);
+                }
+                EditorGUILayout.EndHorizontal();
+
+                EditorGUI.indentLevel++;
+                if (asset.Value.Any())
+                {
+                    foreach (var dependency in asset.Value)
+                    {
+                        EditorGUILayout.BeginHorizontal();
+                        var depObj = AssetDatabase.LoadAssetAtPath<Object>(dependency);
+                        var depIcon = AssetDatabase.GetCachedIcon(dependency);
+                        GUILayout.Space(20);
+                        GUILayout.Label(depIcon, GUILayout.Width(20), GUILayout.Height(20));
+                        EditorGUILayout.LabelField(dependency);
+                        
+                        if (GUILayout.Button("Select", GUILayout.Width(60)))
+                        {
+                            Selection.activeObject = depObj;
+                            EditorGUIUtility.PingObject(depObj);
+                        }
+                        EditorGUILayout.EndHorizontal();
+                    }
+                }
+                else
+                {
+                    EditorGUILayout.LabelField("No dependencies");
+                }
+                EditorGUI.indentLevel--;
+
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.Space();
+            }
         }
 
         private void DrawNamingIssues()
@@ -219,6 +312,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
                 {
                     AssetDatabase.DeleteAsset(assetPath);
                     AssetDatabase.Refresh();
+                    RefreshData();
                 }
             }
 
