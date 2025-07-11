@@ -41,61 +41,97 @@ namespace Microsoft.Unity.VisualStudio.Editor
             InitializeStyles();
         }
 
+        private void OnDisable()
+        {
+            if (_backgroundTexture != null)
+            {
+                DestroyImmediate(_backgroundTexture);
+                _backgroundTexture = null;
+            }
+        }
+
         private void InitializeStyles()
         {
             // Header style
-            _headerStyle = new GUIStyle(EditorStyles.boldLabel);
-            _headerStyle.fontSize = 16;
-            _headerStyle.margin = new RectOffset(10, 10, 10, 10);
+            _headerStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 16,
+                margin = new RectOffset(10, 10, 10, 10)
+            };
             _headerStyle.normal.textColor = EditorGUIUtility.isProSkin ? Color.white : Color.black;
 
             // Section style
-            _sectionStyle = new GUIStyle(EditorStyles.boldLabel);
-            _sectionStyle.fontSize = 13;
-            _sectionStyle.margin = new RectOffset(5, 5, 10, 5);
+            _sectionStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 13,
+                margin = new RectOffset(5, 5, 10, 5)
+            };
             _sectionStyle.normal.textColor = EditorGUIUtility.isProSkin ? Color.white : Color.black;
 
             // Button style
-            _buttonStyle = new GUIStyle(GUI.skin.button);
+            _buttonStyle = new GUIStyle(GUI.skin.button)
+            {
+                fixedWidth = 60,
+                margin = new RectOffset(2, 2, 2, 2)
+            };
             _buttonStyle.normal.textColor = EditorGUIUtility.isProSkin ? Color.white : Color.black;
             _buttonStyle.hover.textColor = _accentColor;
-            _buttonStyle.fixedWidth = 60;
-            _buttonStyle.margin = new RectOffset(2, 2, 2, 2);
 
             // Search style
-            _searchStyle = new GUIStyle(EditorStyles.toolbarSearchField);
-            _searchStyle.fixedWidth = 200;
-            _searchStyle.margin = new RectOffset(5, 5, 5, 5);
+            _searchStyle = new GUIStyle(EditorStyles.toolbarSearchField)
+            {
+                fixedWidth = 200,
+                margin = new RectOffset(5, 5, 5, 5)
+            };
 
             // Asset box style
-            _assetBoxStyle = new GUIStyle(EditorStyles.helpBox);
-            _assetBoxStyle.padding = new RectOffset(10, 10, 10, 10);
-            _assetBoxStyle.margin = new RectOffset(5, 5, 5, 5);
+            _assetBoxStyle = new GUIStyle(EditorStyles.helpBox)
+            {
+                padding = new RectOffset(10, 10, 10, 10),
+                margin = new RectOffset(5, 5, 5, 5)
+            };
 
             // Toolbar button style
-            _toolbarButtonStyle = new GUIStyle(EditorStyles.toolbarButton);
-            _toolbarButtonStyle.fontSize = 12;
-            _toolbarButtonStyle.fixedHeight = 25;
-            _toolbarButtonStyle.margin = new RectOffset(5, 5, 5, 5);
-            _toolbarButtonStyle.padding = new RectOffset(10, 10, 5, 5);
+            _toolbarButtonStyle = new GUIStyle(EditorStyles.toolbarButton)
+            {
+                fontSize = 12,
+                fixedHeight = 25,
+                margin = new RectOffset(5, 5, 5, 5),
+                padding = new RectOffset(10, 10, 5, 5)
+            };
 
             // Toggle style
-            _toggleStyle = new GUIStyle(EditorStyles.toggle);
-            _toggleStyle.fontSize = 12;
-            _toggleStyle.margin = new RectOffset(10, 10, 5, 5);
+            _toggleStyle = new GUIStyle(EditorStyles.toggle)
+            {
+                fontSize = 12,
+                margin = new RectOffset(10, 10, 5, 5)
+            };
 
             // Create background texture
-            _backgroundTexture = new Texture2D(1, 1);
-            _backgroundTexture.SetPixel(0, 0, EditorGUIUtility.isProSkin ? _proColor : _personalColor);
-            _backgroundTexture.Apply();
+            if (_backgroundTexture == null)
+            {
+                _backgroundTexture = new Texture2D(1, 1);
+                _backgroundTexture.SetPixel(0, 0, EditorGUIUtility.isProSkin ? _proColor : _personalColor);
+                _backgroundTexture.Apply();
+            }
         }
 
         private void OnGUI()
         {
+            if (Event.current.type == EventType.Layout)
+            {
+                InitializeStyles();
+            }
+
             DrawBackground();
+
+            EditorGUILayout.BeginVertical();
+            
             DrawToolbar();
             DrawOptions();
             DrawMainContent();
+            
+            EditorGUILayout.EndVertical();
         }
 
         private void DrawBackground()
@@ -163,14 +199,31 @@ namespace Microsoft.Unity.VisualStudio.Editor
         private void DrawOptions()
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-            _showUnusedAssets = EditorGUILayout.ToggleLeft(new GUIContent(" Show Unused", EditorGUIUtility.IconContent("d_TreeEditor.Trash").image), _showUnusedAssets, _toggleStyle);
-            _showDependencies = EditorGUILayout.ToggleLeft(new GUIContent(" Show Dependencies", EditorGUIUtility.IconContent("d_BuildSettings.Web.Small").image), _showDependencies, _toggleStyle);
-            _showNamingIssues = EditorGUILayout.ToggleLeft(new GUIContent(" Show Naming Issues", EditorGUIUtility.IconContent("d_FilterByLabel").image), _showNamingIssues, _toggleStyle);
+            
+            _showUnusedAssets = EditorGUILayout.ToggleLeft(
+                new GUIContent(" Show Unused", EditorGUIUtility.IconContent("d_TreeEditor.Trash").image), 
+                _showUnusedAssets, 
+                _toggleStyle
+            );
+            
+            _showDependencies = EditorGUILayout.ToggleLeft(
+                new GUIContent(" Show Dependencies", EditorGUIUtility.IconContent("d_BuildSettings.Web.Small").image), 
+                _showDependencies, 
+                _toggleStyle
+            );
+            
+            _showNamingIssues = EditorGUILayout.ToggleLeft(
+                new GUIContent(" Show Naming Issues", EditorGUIUtility.IconContent("d_FilterByLabel").image), 
+                _showNamingIssues, 
+                _toggleStyle
+            );
+            
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.Space(5);
             
-            if (GUILayout.Button(new GUIContent(" Optimization Settings", EditorGUIUtility.IconContent("d_Settings").image), 
+            if (GUILayout.Button(
+                new GUIContent(" Optimization Settings", EditorGUIUtility.IconContent("d_Settings").image), 
                 _showOptimizationSettings ? EditorStyles.toolbarButton : EditorStyles.miniButton))
             {
                 _showOptimizationSettings = !_showOptimizationSettings;
@@ -300,10 +353,15 @@ namespace Microsoft.Unity.VisualStudio.Editor
                 EditorGUILayout.BeginHorizontal();
                 var obj = AssetDatabase.LoadAssetAtPath<Object>(asset.Key);
                 var icon = AssetDatabase.GetCachedIcon(asset.Key);
-                GUILayout.Label(icon, GUILayout.Width(20), GUILayout.Height(20));
+                
+                if (icon != null)
+                {
+                    GUILayout.Label(icon, GUILayout.Width(20), GUILayout.Height(20));
+                }
+                
                 EditorGUILayout.LabelField(asset.Key, EditorStyles.boldLabel);
                 
-                if (GUILayout.Button("Select", _buttonStyle))
+                if (obj != null && GUILayout.Button("Select", _buttonStyle))
                 {
                     Selection.activeObject = obj;
                     EditorGUIUtility.PingObject(obj);
@@ -311,7 +369,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
                 EditorGUILayout.EndHorizontal();
 
                 EditorGUI.indentLevel++;
-                if (asset.Value.Any())
+                if (asset.Value != null && asset.Value.Any())
                 {
                     foreach (var dependency in asset.Value)
                     {
@@ -319,10 +377,15 @@ namespace Microsoft.Unity.VisualStudio.Editor
                         var depObj = AssetDatabase.LoadAssetAtPath<Object>(dependency);
                         var depIcon = AssetDatabase.GetCachedIcon(dependency);
                         GUILayout.Space(20);
-                        GUILayout.Label(depIcon, GUILayout.Width(20), GUILayout.Height(20));
+                        
+                        if (depIcon != null)
+                        {
+                            GUILayout.Label(depIcon, GUILayout.Width(16), GUILayout.Height(16));
+                        }
+                        
                         EditorGUILayout.LabelField(dependency);
                         
-                        if (GUILayout.Button("Select", _buttonStyle))
+                        if (depObj != null && GUILayout.Button("Select", _buttonStyle))
                         {
                             Selection.activeObject = depObj;
                             EditorGUIUtility.PingObject(depObj);
@@ -332,10 +395,10 @@ namespace Microsoft.Unity.VisualStudio.Editor
                 }
                 else
                 {
-                    EditorGUILayout.LabelField("No dependencies", EditorStyles.miniLabel);
+                    EditorGUILayout.LabelField("No dependencies");
                 }
                 EditorGUI.indentLevel--;
-
+                
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.Space(5);
             }
@@ -347,7 +410,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
         private void DrawNamingIssues()
         {
             EditorGUILayout.BeginVertical(_assetBoxStyle);
-            EditorGUILayout.LabelField(new GUIContent(" Naming Convention Issues", EditorGUIUtility.IconContent("d_FilterByLabel").image), _headerStyle);
+            EditorGUILayout.LabelField(new GUIContent(" Naming Issues", EditorGUIUtility.IconContent("d_FilterByLabel").image), _headerStyle);
             EditorGUILayout.Space(5);
 
             foreach (var assetPath in _invalidNamedAssets)
@@ -357,84 +420,74 @@ namespace Microsoft.Unity.VisualStudio.Editor
                     continue;
 
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                
                 EditorGUILayout.BeginHorizontal();
-
-                // Asset icon and path
                 var obj = AssetDatabase.LoadAssetAtPath<Object>(assetPath);
                 var icon = AssetDatabase.GetCachedIcon(assetPath);
-                GUILayout.Label(icon, GUILayout.Width(20), GUILayout.Height(20));
-                EditorGUILayout.LabelField(assetPath);
-
-                // Suggested name
-                string suggestedName = AssetOptimizer.SuggestAssetName(assetPath);
-                EditorGUILayout.LabelField($"→ {suggestedName}", EditorStyles.miniLabel, GUILayout.Width(200));
                 
-                if (GUILayout.Button("Fix", _buttonStyle))
+                if (icon != null)
                 {
-                    if (EditorUtility.DisplayDialog("Rename Asset",
-                        $"Rename to: {suggestedName}?",
-                        "Rename", "Cancel"))
-                    {
-                        string directory = System.IO.Path.GetDirectoryName(assetPath);
-                        string extension = System.IO.Path.GetExtension(assetPath);
-                        string newPath = System.IO.Path.Combine(directory ?? "", suggestedName + extension);
-                        
-                        AssetDatabase.MoveAsset(assetPath, newPath);
-                        AssetDatabase.Refresh();
-                        _invalidNamedAssets = AssetOptimizer.ValidateAssetNames();
-                    }
+                    GUILayout.Label(icon, GUILayout.Width(20), GUILayout.Height(20));
                 }
-
+                
+                EditorGUILayout.LabelField(assetPath, EditorStyles.boldLabel);
+                
+                if (obj != null && GUILayout.Button("Select", _buttonStyle))
+                {
+                    Selection.activeObject = obj;
+                    EditorGUIUtility.PingObject(obj);
+                }
                 EditorGUILayout.EndHorizontal();
+
+                string suggestedName = AssetOptimizer.SuggestAssetName(assetPath);
+                EditorGUILayout.LabelField($"Suggested name: {suggestedName}", EditorStyles.miniLabel);
+                
                 EditorGUILayout.EndVertical();
+                EditorGUILayout.Space(2);
             }
             
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space(10);
         }
 
-        private void DrawAssetEntry(string assetPath, bool isUnused = false)
+        private void DrawAssetEntry(string assetPath, bool showDelete = false)
         {
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            
             EditorGUILayout.BeginHorizontal();
-
-            // Asset icon
             var obj = AssetDatabase.LoadAssetAtPath<Object>(assetPath);
             var icon = AssetDatabase.GetCachedIcon(assetPath);
-            GUILayout.Label(icon, GUILayout.Width(20), GUILayout.Height(20));
-
-            // Asset name and path
-            EditorGUILayout.LabelField(assetPath);
-
-            // Actions
-            if (GUILayout.Button("Select", _buttonStyle))
+            
+            if (icon != null)
             {
-                Selection.activeObject = obj;
-                EditorGUIUtility.PingObject(obj);
+                GUILayout.Label(icon, GUILayout.Width(20), GUILayout.Height(20));
             }
-
-            if (isUnused && GUILayout.Button("Delete", _buttonStyle))
+            
+            EditorGUILayout.LabelField(assetPath, EditorStyles.boldLabel);
+            
+            if (obj != null)
             {
-                if (EditorUtility.DisplayDialog("Delete Asset",
-                    $"Are you sure you want to delete {assetPath}?",
-                    "Delete", "Cancel"))
+                if (GUILayout.Button("Select", _buttonStyle))
                 {
-                    AssetDatabase.DeleteAsset(assetPath);
-                    AssetDatabase.Refresh();
-                    RefreshData();
+                    Selection.activeObject = obj;
+                    EditorGUIUtility.PingObject(obj);
+                }
+                
+                if (showDelete && GUILayout.Button("Delete", _buttonStyle))
+                {
+                    if (EditorUtility.DisplayDialog("Delete Asset",
+                        $"Are you sure you want to delete {assetPath}?",
+                        "Delete", "Cancel"))
+                    {
+                        AssetDatabase.DeleteAsset(assetPath);
+                        RefreshData();
+                    }
                 }
             }
-
+            
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.EndVertical();
-        }
-
-        private void OnDestroy()
-        {
-            if (_backgroundTexture != null)
-            {
-                DestroyImmediate(_backgroundTexture);
-            }
+            EditorGUILayout.Space(2);
         }
     }
 } 
