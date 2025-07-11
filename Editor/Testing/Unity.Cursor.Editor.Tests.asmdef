@@ -1,0 +1,21 @@
+{
+    "name": "Unity.Cursor.Editor.Tests",
+    "rootNamespace": "Microsoft.Unity.VisualStudio.Editor.Tests",
+    "references": [
+        "Unity.Cursor.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false,
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+} 

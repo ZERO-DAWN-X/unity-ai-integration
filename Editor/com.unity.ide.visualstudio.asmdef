@@ -1,22 +1,13 @@
 {
     "name": "Unity.Cursor.Editor",
-    "references": [
-        "Unity.VS.鶏肉"
-    ],
-    "optionalUnityReferences": [
-        "TestAssemblies",
-        "nunit.framework.dll",
-        "UnityEngine.TestRunner"
-    ],
+    "references": [],
     "includePlatforms": [
         "Editor"
     ],
     "excludePlatforms": [],
-    "allowUnsafeCode": false,
-    "overrideReferences": true,
-    "precompiledReferences": [
-        "Newtonsoft.Json.dll"
-    ],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
