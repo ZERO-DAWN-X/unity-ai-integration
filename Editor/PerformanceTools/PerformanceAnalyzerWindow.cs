@@ -18,7 +18,8 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
         private GUIStyle _headerStyle;
         private GUIStyle _labelStyle;
         private GUIStyle _valueStyle;
-        private GUIStyle _warningStyle;
+        private GUIStyle _buttonStyle;
+        private bool _stylesInitialized = false;
 
         [MenuItem("Window/Visual Studio/Performance Tools/Performance Analyzer")]
         public static void ShowWindow()
@@ -26,10 +27,43 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
             GetWindow<PerformanceAnalyzerWindow>("Performance Analyzer");
         }
 
+        private void InitializeStyles()
+        {
+            if (_stylesInitialized) return;
+
+            _headerStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 14,
+                alignment = TextAnchor.MiddleLeft,
+                margin = new RectOffset(5, 5, 5, 5)
+            };
+
+            _labelStyle = new GUIStyle(EditorStyles.label)
+            {
+                fontSize = 12,
+                alignment = TextAnchor.MiddleLeft,
+                margin = new RectOffset(5, 5, 2, 2)
+            };
+
+            _valueStyle = new GUIStyle(EditorStyles.label)
+            {
+                fontSize = 12,
+                alignment = TextAnchor.MiddleRight,
+                margin = new RectOffset(5, 5, 2, 2)
+            };
+
+            _buttonStyle = new GUIStyle(GUI.skin.button)
+            {
+                fontSize = 12,
+                padding = new RectOffset(10, 10, 5, 5)
+            };
+
+            _stylesInitialized = true;
+        }
+
         private void OnEnable()
         {
             _analyzer = new PerformanceAnalyzer();
-            InitializeStyles();
             EditorApplication.update += OnUpdate;
         }
 
@@ -38,38 +72,9 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
             EditorApplication.update -= OnUpdate;
         }
 
-        private void InitializeStyles()
-        {
-            _headerStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 14,
-                margin = new RectOffset(5, 5, 5, 5)
-            };
-
-            _labelStyle = new GUIStyle(EditorStyles.label)
-            {
-                margin = new RectOffset(10, 5, 2, 2),
-                padding = new RectOffset(5, 5, 2, 2)
-            };
-
-            _valueStyle = new GUIStyle(EditorStyles.label)
-            {
-                alignment = TextAnchor.MiddleRight,
-                margin = new RectOffset(5, 10, 2, 2),
-                padding = new RectOffset(5, 5, 2, 2)
-            };
-
-            _warningStyle = new GUIStyle(EditorStyles.label)
-            {
-                normal = { textColor = Color.yellow },
-                margin = new RectOffset(10, 5, 2, 2),
-                padding = new RectOffset(5, 5, 2, 2)
-            };
-        }
-
         private void OnUpdate()
         {
-            if (!_isRecording || !EditorApplication.isPlaying) return;
+            if (!_isRecording) return;
 
             _timeSinceLastUpdate += Time.deltaTime;
             if (_timeSinceLastUpdate >= _updateInterval)
@@ -77,12 +82,11 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
                 var metrics = _analyzer.GetCurrentMetrics();
                 _metricsHistory.Add(metrics);
                 
-                // Keep history size in check
                 while (_metricsHistory.Count > _maxHistorySize)
                 {
                     _metricsHistory.RemoveAt(0);
                 }
-
+                
                 _timeSinceLastUpdate = 0f;
                 Repaint();
             }
@@ -90,164 +94,151 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
 
         private void OnGUI()
         {
-            DrawToolbar();
-            DrawPerformanceData();
-            DrawGraph();
-            DrawSuggestions();
-        }
-
-        private void DrawToolbar()
-        {
-            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
+            if (!_stylesInitialized)
             {
-                if (GUILayout.Button(_isRecording ? "Stop Recording" : "Start Recording", EditorStyles.toolbarButton))
-                {
-                    _isRecording = !_isRecording;
-                    if (!_isRecording)
-                    {
-                        // Optional: Save or process recorded data
-                    }
-                }
+                InitializeStyles();
+            }
 
-                if (GUILayout.Button("Clear", EditorStyles.toolbarButton))
+            EditorGUILayout.BeginVertical();
+
+            // Header
+            EditorGUILayout.LabelField("Performance Metrics", _headerStyle);
+
+            // Record button
+            GUI.backgroundColor = _isRecording ? Color.red : Color.green;
+            if (GUILayout.Button(_isRecording ? "Stop Recording" : "Start Recording", _buttonStyle))
+            {
+                _isRecording = !_isRecording;
+                if (!_isRecording)
                 {
                     _metricsHistory.Clear();
                 }
-
-                GUILayout.FlexibleSpace();
             }
-            EditorGUILayout.EndHorizontal();
-        }
+            GUI.backgroundColor = Color.white;
 
-        private void DrawPerformanceData()
-        {
-            if (_metricsHistory.Count == 0) return;
+            EditorGUILayout.Space();
 
-            var currentMetrics = _metricsHistory.Last();
-            var avgFps = _metricsHistory.Average(m => m.FPS);
-            var minFps = _metricsHistory.Min(m => m.FPS);
-            var maxFps = _metricsHistory.Max(m => m.FPS);
-
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            // Current metrics
+            if (_analyzer != null)
             {
-                EditorGUILayout.LabelField("Current Performance", _headerStyle);
-
-                DrawMetricRow("FPS", $"{currentMetrics.FPS:F1}", GetFPSColor(currentMetrics.FPS));
-                DrawMetricRow("Frame Time", $"{currentMetrics.FrameTime:F1} ms");
-                DrawMetricRow("Draw Calls", currentMetrics.DrawCalls.ToString());
-                DrawMetricRow("Total Memory", $"{currentMetrics.TotalMemory:F1} MB");
-                DrawMetricRow("Allocated Memory", $"{currentMetrics.AllocatedMemory:F1} MB");
-                DrawMetricRow("Mono Memory", $"{currentMetrics.MonoMemory:F1} MB");
-                DrawMetricRow("Vertex Count", $"{currentMetrics.VertexCount:N0}");
-                DrawMetricRow("Batch Count", currentMetrics.BatchCount.ToString());
-
-                EditorGUILayout.Space();
-                EditorGUILayout.LabelField("Statistics", _headerStyle);
-                DrawMetricRow("Average FPS", $"{avgFps:F1}");
-                DrawMetricRow("Min FPS", $"{minFps:F1}");
-                DrawMetricRow("Max FPS", $"{maxFps:F1}");
+                var metrics = _analyzer.GetCurrentMetrics();
+                if (metrics != null)
+                {
+                    DrawMetrics(metrics);
+                }
             }
+
+            // History graph
+            if (_isRecording && _metricsHistory.Count > 0)
+            {
+                DrawPerformanceGraph();
+            }
+
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawMetricRow(string label, string value, Color? colorOverride = null)
+        private void DrawMetrics(PerformanceAnalyzer.PerformanceMetrics metrics)
         {
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            
+            EditorGUILayout.LabelField("Real-time Metrics", _headerStyle);
+
             EditorGUILayout.BeginHorizontal();
-            {
-                var style = _labelStyle;
-                if (colorOverride.HasValue)
-                {
-                    style = new GUIStyle(_labelStyle);
-                    style.normal.textColor = colorOverride.Value;
-                }
-
-                EditorGUILayout.LabelField(label, style);
-                EditorGUILayout.LabelField(value, _valueStyle);
-            }
+            EditorGUILayout.LabelField("FPS", _labelStyle);
+            EditorGUILayout.LabelField(metrics.FPS.ToString("F1"), GetFPSStyle(metrics.FPS));
             EditorGUILayout.EndHorizontal();
-        }
 
-        private void DrawGraph()
-        {
-            if (_metricsHistory.Count < 2) return;
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Frame Time", _labelStyle);
+            EditorGUILayout.LabelField($"{metrics.FrameTime:F1} ms", _valueStyle);
+            EditorGUILayout.EndHorizontal();
 
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            {
-                EditorGUILayout.LabelField("FPS Over Time", _headerStyle);
-                
-                var rect = GUILayoutUtility.GetRect(Screen.width, 150);
-                var padding = 20f;
-                var graphRect = new Rect(rect.x + padding, rect.y + padding, 
-                                      rect.width - (padding * 2), rect.height - (padding * 2));
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Total Memory", _labelStyle);
+            EditorGUILayout.LabelField($"{metrics.TotalMemory:F1} MB", _valueStyle);
+            EditorGUILayout.EndHorizontal();
 
-                // Draw background
-                EditorGUI.DrawRect(rect, new Color(0.2f, 0.2f, 0.2f));
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Draw Calls", _labelStyle);
+            EditorGUILayout.LabelField(metrics.DrawCalls.ToString(), _valueStyle);
+            EditorGUILayout.EndHorizontal();
 
-                // Draw graph
-                var fpsValues = _metricsHistory.Select(m => m.FPS).ToArray();
-                var maxValue = Mathf.Max(fpsValues.Max(), 60); // At least show up to 60 FPS
-                
-                // Draw horizontal lines
-                for (int i = 0; i <= 5; i++)
-                {
-                    float y = graphRect.y + (graphRect.height * (1 - (i / 5f)));
-                    float value = maxValue * (i / 5f);
-                    Handles.color = new Color(1, 1, 1, 0.2f);
-                    Handles.DrawLine(new Vector2(graphRect.x, y), new Vector2(graphRect.x + graphRect.width, y));
-                    EditorGUI.LabelField(new Rect(graphRect.x - 40, y - 8, 35, 16), 
-                                       $"{value:F0}", new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleRight });
-                }
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Vertices", _labelStyle);
+            EditorGUILayout.LabelField(metrics.VertexCount.ToString(), _valueStyle);
+            EditorGUILayout.EndHorizontal();
 
-                // Draw FPS line
-                Handles.color = Color.green;
-                for (int i = 0; i < fpsValues.Length - 1; i++)
-                {
-                    float x1 = graphRect.x + (graphRect.width * (i / (float)(fpsValues.Length - 1)));
-                    float x2 = graphRect.x + (graphRect.width * ((i + 1) / (float)(fpsValues.Length - 1)));
-                    float y1 = graphRect.y + (graphRect.height * (1 - (fpsValues[i] / maxValue)));
-                    float y2 = graphRect.y + (graphRect.height * (1 - (fpsValues[i + 1] / maxValue)));
-                    
-                    Handles.DrawLine(new Vector2(x1, y1), new Vector2(x2, y2));
-                }
-            }
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawSuggestions()
+        private GUIStyle GetFPSStyle(float fps)
         {
-            if (_metricsHistory.Count == 0) return;
-
-            var currentMetrics = _metricsHistory.Last();
-            var suggestions = new List<string>();
-
-            if (currentMetrics.FPS < 60)
-                suggestions.Add("FPS is below 60. Consider optimizing performance.");
-            if (currentMetrics.DrawCalls > 1000)
-                suggestions.Add("High number of draw calls. Consider using batching or atlasing.");
-            if (currentMetrics.TotalMemory > 1000)
-                suggestions.Add("High memory usage. Check for memory leaks.");
-            if (currentMetrics.BatchCount > 100)
-                suggestions.Add("High batch count. Consider using material instancing or atlasing.");
-
-            if (suggestions.Count > 0)
-            {
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                {
-                    EditorGUILayout.LabelField("Optimization Suggestions", _headerStyle);
-                    foreach (var suggestion in suggestions)
-                    {
-                        EditorGUILayout.LabelField(suggestion, _warningStyle);
-                    }
-                }
-                EditorGUILayout.EndVertical();
-            }
+            var style = new GUIStyle(_valueStyle);
+            if (fps >= 55)
+                style.normal.textColor = Color.green;
+            else if (fps >= 30)
+                style.normal.textColor = Color.yellow;
+            else
+                style.normal.textColor = Color.red;
+            return style;
         }
 
-        private Color GetFPSColor(float fps)
+        private void DrawPerformanceGraph()
         {
-            if (fps >= 60) return Color.green;
-            if (fps >= 30) return Color.yellow;
-            return Color.red;
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.LabelField("FPS History", _headerStyle);
+
+            var rect = GUILayoutUtility.GetRect(EditorGUIUtility.currentViewWidth - 40, 200);
+            var graphRect = new Rect(rect.x + 5, rect.y + 5, rect.width - 10, rect.height - 10);
+
+            // Draw background
+            EditorGUI.DrawRect(graphRect, new Color(0.2f, 0.2f, 0.2f));
+
+            // Draw grid lines
+            DrawGridLines(graphRect);
+
+            // Draw FPS line
+            if (_metricsHistory.Count > 1)
+            {
+                var maxFPS = Mathf.Max(_metricsHistory.Max(m => m.FPS), 60);
+                var points = new Vector3[_metricsHistory.Count];
+
+                for (int i = 0; i < _metricsHistory.Count; i++)
+                {
+                    var normalizedX = (float)i / (_metricsHistory.Count - 1);
+                    var normalizedY = _metricsHistory[i].FPS / maxFPS;
+                    points[i] = new Vector3(
+                        graphRect.x + normalizedX * graphRect.width,
+                        graphRect.y + (1 - normalizedY) * graphRect.height,
+                        0
+                    );
+                }
+
+                Handles.color = Color.green;
+                Handles.DrawAAPolyLine(2f, points);
+            }
+
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawGridLines(Rect rect)
+        {
+            Handles.color = new Color(1, 1, 1, 0.2f);
+
+            // Vertical lines
+            for (int i = 0; i <= 10; i++)
+            {
+                float x = rect.x + (rect.width * i / 10);
+                Handles.DrawLine(new Vector3(x, rect.y, 0), new Vector3(x, rect.y + rect.height, 0));
+            }
+
+            // Horizontal lines
+            for (int i = 0; i <= 4; i++)
+            {
+                float y = rect.y + (rect.height * i / 4);
+                Handles.DrawLine(new Vector3(rect.x, y, 0), new Vector3(rect.x + rect.width, y, 0));
+            }
         }
     }
+} 
 } 
