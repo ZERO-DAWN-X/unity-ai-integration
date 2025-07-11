@@ -117,11 +117,12 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
             _lastScriptTime = currentScriptTime;
             Profiler.EndSample();
 
-            // Track rendering metrics using Profiler.BeginSample
+            // Track rendering metrics
             Profiler.BeginSample("Rendering");
-            metrics.DrawCalls = Camera.main != null ? UnityStats.GetDrawCalls() : 0;
-            metrics.VertexCount = Camera.main != null ? UnityStats.GetTriangles() * 3 : 0; // Approximate from triangles
-            metrics.BatchCount = Camera.main != null ? UnityStats.GetBatches() : 0;
+            var renderStats = GetRenderingStatistics();
+            metrics.DrawCalls = renderStats.drawCalls;
+            metrics.VertexCount = renderStats.vertexCount;
+            metrics.BatchCount = renderStats.batchCount;
             Profiler.EndSample();
 
             CurrentMetrics = metrics;
@@ -131,28 +132,34 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
                 MetricsHistory.Dequeue();
         }
 
-        private static class UnityStats
+        private static (int drawCalls, int vertexCount, int batchCount) GetRenderingStatistics()
         {
-            public static int GetDrawCalls()
+            int drawCalls = 0;
+            int vertexCount = 0;
+            int batchCount = 0;
+
+            var renderers = Object.FindObjectsOfType<Renderer>();
+            foreach (var renderer in renderers)
             {
-                return Camera.main != null ? Camera.main.GetCommandBuffers(CameraEvent.AfterForwardOpaque).Sum(buffer => buffer.sizeInBytes) > 0 ? 1 : 0 : 0;
+                if (!renderer.isVisible) continue;
+
+                drawCalls++; // Approximate: each visible renderer causes at least one draw call
+                batchCount++; // Approximate: each renderer represents a potential batch
+
+                var meshFilter = renderer.GetComponent<MeshFilter>();
+                if (meshFilter != null && meshFilter.sharedMesh != null)
+                {
+                    vertexCount += meshFilter.sharedMesh.vertexCount;
+                }
+
+                var skinnedMeshRenderer = renderer as SkinnedMeshRenderer;
+                if (skinnedMeshRenderer != null && skinnedMeshRenderer.sharedMesh != null)
+                {
+                    vertexCount += skinnedMeshRenderer.sharedMesh.vertexCount;
+                }
             }
 
-            public static int GetBatches()
-            {
-                return Camera.main != null ? Camera.main.GetCommandBuffers(CameraEvent.AfterForwardOpaque).Length : 0;
-            }
-
-            public static int GetTriangles()
-            {
-                if (Camera.main == null) return 0;
-                var renderers = Object.FindObjectsOfType<MeshRenderer>();
-                return renderers.Sum(r => {
-                    if (r.GetComponent<MeshFilter>()?.sharedMesh != null)
-                        return r.GetComponent<MeshFilter>().sharedMesh.triangles.Length / 3;
-                    return 0;
-                });
-            }
+            return (drawCalls, vertexCount, batchCount);
         }
 
         public static PerformanceReport GenerateReport()
