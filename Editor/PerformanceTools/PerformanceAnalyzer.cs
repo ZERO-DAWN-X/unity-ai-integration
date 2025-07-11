@@ -10,6 +10,8 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
     {
         private static readonly float MemoryDivider = 1024 * 1024f; // Convert to MB
         private static readonly int MaxSamples = 300; // 5 minutes at 1 sample per second
+        private float _lastFrameTime;
+        private Queue<float> _fpsHistory = new Queue<float>();
         
         public class PerformanceMetrics
         {
@@ -21,219 +23,103 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
             public int DrawCalls { get; set; }
             public int VertexCount { get; set; }
             public int BatchCount { get; set; }
-            public float GpuTime { get; set; }
-            public float CpuFrameTime { get; set; }
-            public float GCMemory { get; set; }
-            public int ActiveGameObjects { get; set; }
-            public int TotalComponents { get; set; }
-            public float PhysicsTime { get; set; }
-            public float AnimationTime { get; set; }
-            public float ScriptTime { get; set; }
         }
 
-        private static readonly Queue<PerformanceMetrics> MetricsHistory = new Queue<PerformanceMetrics>();
-        private static float _lastGCMemory;
-        private static float _deltaTime;
-        private static float _updateInterval = 1.0f;
-        private static float _timeSinceLastUpdate;
-        private static float _lastPhysicsTime;
-        private static float _lastAnimationTime;
-        private static float _lastScriptTime;
-        private static float _lastFrameTime;
-
-        public static PerformanceMetrics CurrentMetrics { get; private set; }
-        public static IEnumerable<PerformanceMetrics> History => MetricsHistory;
-
-        public static void StartRecording()
+        public PerformanceAnalyzer()
         {
-            _lastPhysicsTime = Time.realtimeSinceStartup;
-            _lastAnimationTime = Time.realtimeSinceStartup;
-            _lastScriptTime = Time.realtimeSinceStartup;
             _lastFrameTime = Time.realtimeSinceStartup;
         }
 
-        public static void StopRecording()
-        {
-            // No cleanup needed for built-in profiling
-        }
-
-        public static void Update()
-        {
-            _deltaTime += Time.unscaledDeltaTime;
-            _timeSinceLastUpdate += Time.unscaledDeltaTime;
-
-            if (_timeSinceLastUpdate >= _updateInterval)
-            {
-                CollectMetrics();
-                _timeSinceLastUpdate = 0f;
-            }
-        }
-
-        private static void CollectMetrics()
+        public PerformanceMetrics GetCurrentMetrics()
         {
             float currentTime = Time.realtimeSinceStartup;
-            float frameDeltaTime = currentTime - _lastFrameTime;
+            float deltaTime = currentTime - _lastFrameTime;
             _lastFrameTime = currentTime;
 
-            var metrics = new PerformanceMetrics
+            float fps = 1.0f / Mathf.Max(deltaTime, 0.000001f);
+            
+            // Add to history and maintain max size
+            _fpsHistory.Enqueue(fps);
+            if (_fpsHistory.Count > MaxSamples)
+                _fpsHistory.Dequeue();
+
+            // Calculate average FPS
+            float avgFps = _fpsHistory.Count > 0 ? _fpsHistory.Average() : fps;
+
+            return new PerformanceMetrics
             {
-                FPS = 1.0f / frameDeltaTime,
-                FrameTime = frameDeltaTime * 1000f,
+                FPS = avgFps,
+                FrameTime = deltaTime * 1000f, // Convert to milliseconds
                 TotalMemory = Profiler.GetTotalReservedMemoryLong() / MemoryDivider,
                 AllocatedMemory = Profiler.GetTotalAllocatedMemoryLong() / MemoryDivider,
                 MonoMemory = Profiler.GetMonoUsedSizeLong() / MemoryDivider,
-                DrawCalls = 0, // Will be updated through profiler samples
-                VertexCount = 0, // Will be updated through profiler samples
-                BatchCount = 0, // Will be updated through profiler samples
-                GpuTime = 0, // Will be calculated from profiler samples
-                CpuFrameTime = frameDeltaTime * 1000f,
-                ActiveGameObjects = Object.FindObjectsOfType<GameObject>().Length,
-                TotalComponents = Object.FindObjectsOfType<Component>().Length
+                DrawCalls = GetDrawCallCount(),
+                VertexCount = GetVertexCount(),
+                BatchCount = GetBatchCount()
             };
-
-            // Track GC allocations
-            float currentGCMemory = System.GC.GetTotalMemory(false) / MemoryDivider;
-            metrics.GCMemory = currentGCMemory - _lastGCMemory;
-            _lastGCMemory = currentGCMemory;
-
-            // Track physics time
-            Profiler.BeginSample("Physics");
-            float currentPhysicsTime = Time.realtimeSinceStartup;
-            metrics.PhysicsTime = (currentPhysicsTime - _lastPhysicsTime) * 1000f; // Convert to ms
-            _lastPhysicsTime = currentPhysicsTime;
-            Profiler.EndSample();
-
-            // Track animation time
-            Profiler.BeginSample("Animation");
-            float currentAnimationTime = Time.realtimeSinceStartup;
-            metrics.AnimationTime = (currentAnimationTime - _lastAnimationTime) * 1000f;
-            _lastAnimationTime = currentAnimationTime;
-            Profiler.EndSample();
-
-            // Track script time
-            Profiler.BeginSample("Scripts");
-            float currentScriptTime = Time.realtimeSinceStartup;
-            metrics.ScriptTime = (currentScriptTime - _lastScriptTime) * 1000f;
-            _lastScriptTime = currentScriptTime;
-            Profiler.EndSample();
-
-            // Track rendering metrics
-            Profiler.BeginSample("Rendering");
-            var renderStats = GetRenderingStatistics();
-            metrics.DrawCalls = renderStats.drawCalls;
-            metrics.VertexCount = renderStats.vertexCount;
-            metrics.BatchCount = renderStats.batchCount;
-            Profiler.EndSample();
-
-            CurrentMetrics = metrics;
-            MetricsHistory.Enqueue(metrics);
-
-            if (MetricsHistory.Count > MaxSamples)
-                MetricsHistory.Dequeue();
         }
 
-        private static (int drawCalls, int vertexCount, int batchCount) GetRenderingStatistics()
+        private int GetDrawCallCount()
         {
             int drawCalls = 0;
-            int vertexCount = 0;
-            int batchCount = 0;
-
             var renderers = Object.FindObjectsOfType<Renderer>();
             foreach (var renderer in renderers)
             {
-                if (!renderer.isVisible) continue;
+                if (renderer.isVisible)
+                {
+                    drawCalls++;
+                }
+            }
+            return drawCalls;
+        }
 
-                drawCalls++; // Approximate: each visible renderer causes at least one draw call
-                batchCount++; // Approximate: each renderer represents a potential batch
+        private int GetVertexCount()
+        {
+            int vertexCount = 0;
+            var meshFilters = Object.FindObjectsOfType<MeshFilter>();
+            var skinnedMeshes = Object.FindObjectsOfType<SkinnedMeshRenderer>();
 
-                var meshFilter = renderer.GetComponent<MeshFilter>();
-                if (meshFilter != null && meshFilter.sharedMesh != null)
+            foreach (var meshFilter in meshFilters)
+            {
+                if (meshFilter.sharedMesh != null && meshFilter.GetComponent<Renderer>()?.isVisible == true)
                 {
                     vertexCount += meshFilter.sharedMesh.vertexCount;
                 }
+            }
 
-                var skinnedMeshRenderer = renderer as SkinnedMeshRenderer;
-                if (skinnedMeshRenderer != null && skinnedMeshRenderer.sharedMesh != null)
+            foreach (var skinnedMesh in skinnedMeshes)
+            {
+                if (skinnedMesh.sharedMesh != null && skinnedMesh.isVisible)
                 {
-                    vertexCount += skinnedMeshRenderer.sharedMesh.vertexCount;
+                    vertexCount += skinnedMesh.sharedMesh.vertexCount;
                 }
             }
 
-            return (drawCalls, vertexCount, batchCount);
+            return vertexCount;
         }
 
-        public static PerformanceReport GenerateReport()
+        private int GetBatchCount()
         {
-            if (!MetricsHistory.Any())
-                return null;
+            int batchCount = 0;
+            var renderers = Object.FindObjectsOfType<Renderer>();
+            var materials = new HashSet<Material>();
 
-            return new PerformanceReport
+            foreach (var renderer in renderers)
             {
-                AverageFPS = MetricsHistory.Average(m => m.FPS),
-                MinFPS = MetricsHistory.Min(m => m.FPS),
-                MaxFPS = MetricsHistory.Max(m => m.FPS),
-                AverageMemory = MetricsHistory.Average(m => m.TotalMemory),
-                PeakMemory = MetricsHistory.Max(m => m.TotalMemory),
-                AverageDrawCalls = (int)MetricsHistory.Average(m => m.DrawCalls),
-                PeakDrawCalls = MetricsHistory.Max(m => m.DrawCalls),
-                AverageGpuTime = MetricsHistory.Average(m => m.GpuTime),
-                AverageCpuTime = MetricsHistory.Average(m => m.CpuFrameTime),
-                TotalGCAllocations = MetricsHistory.Sum(m => m.GCMemory),
-                AveragePhysicsTime = MetricsHistory.Average(m => m.PhysicsTime),
-                AverageAnimationTime = MetricsHistory.Average(m => m.AnimationTime),
-                AverageScriptTime = MetricsHistory.Average(m => m.ScriptTime)
-            };
-        }
-
-        public class PerformanceReport
-        {
-            public float AverageFPS { get; set; }
-            public float MinFPS { get; set; }
-            public float MaxFPS { get; set; }
-            public float AverageMemory { get; set; }
-            public float PeakMemory { get; set; }
-            public int AverageDrawCalls { get; set; }
-            public int PeakDrawCalls { get; set; }
-            public float AverageGpuTime { get; set; }
-            public float AverageCpuTime { get; set; }
-            public float TotalGCAllocations { get; set; }
-            public float AveragePhysicsTime { get; set; }
-            public float AverageAnimationTime { get; set; }
-            public float AverageScriptTime { get; set; }
-
-            public List<string> GetOptimizationSuggestions()
-            {
-                var suggestions = new List<string>();
-
-                if (AverageFPS < 60)
-                    suggestions.Add($"Low FPS ({AverageFPS:F1}). Consider optimizing heavy operations or reducing scene complexity.");
-
-                if (AverageDrawCalls > 1000)
-                    suggestions.Add($"High draw call count ({AverageDrawCalls}). Consider using batching or atlasing.");
-
-                if (AverageMemory > 1000)
-                    suggestions.Add($"High memory usage ({AverageMemory:F1} MB). Check for memory leaks and optimize asset loading.");
-
-                if (AverageGpuTime > 16.67f) // 60 FPS threshold
-                    suggestions.Add($"High GPU time ({AverageGpuTime:F1}ms). Consider optimizing shaders or reducing visual complexity.");
-
-                if (AverageCpuTime > 16.67f)
-                    suggestions.Add($"High CPU time ({AverageCpuTime:F1}ms). Profile scripts and physics operations.");
-
-                if (TotalGCAllocations > 100)
-                    suggestions.Add($"Significant GC allocations ({TotalGCAllocations:F1} MB). Review object creation and destruction patterns.");
-
-                if (AveragePhysicsTime > 8f)
-                    suggestions.Add($"High physics time ({AveragePhysicsTime:F1}ms). Optimize colliders and rigidbodies.");
-
-                if (AverageAnimationTime > 5f)
-                    suggestions.Add($"High animation time ({AverageAnimationTime:F1}ms). Consider reducing animator complexity.");
-
-                if (AverageScriptTime > 5f)
-                    suggestions.Add($"High script execution time ({AverageScriptTime:F1}ms). Profile and optimize MonoBehaviour scripts.");
-
-                return suggestions;
+                if (renderer.isVisible)
+                {
+                    foreach (var material in renderer.sharedMaterials)
+                    {
+                        if (material != null)
+                        {
+                            materials.Add(material);
+                        }
+                    }
+                }
             }
+
+            batchCount = materials.Count;
+            return batchCount;
         }
     }
 } 
