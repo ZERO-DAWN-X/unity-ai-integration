@@ -1,6 +1,6 @@
 # Unity Cursor Integration
 
-![Unity Cursor Integration](Documentation~/Images/hero.jpg)
+![Unity AI Integration](Documentation~/Images/hero.jpg)
 
 > **A powerful Unity package that seamlessly integrates Cursor AI Editor with Unity development workflow**
 
