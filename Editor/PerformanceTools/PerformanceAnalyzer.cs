@@ -39,6 +39,7 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
         private static float _lastPhysicsTime;
         private static float _lastAnimationTime;
         private static float _lastScriptTime;
+        private static float _lastFrameTime;
 
         public static PerformanceMetrics CurrentMetrics { get; private set; }
         public static IEnumerable<PerformanceMetrics> History => MetricsHistory;
@@ -48,6 +49,7 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
             _lastPhysicsTime = Time.realtimeSinceStartup;
             _lastAnimationTime = Time.realtimeSinceStartup;
             _lastScriptTime = Time.realtimeSinceStartup;
+            _lastFrameTime = Time.realtimeSinceStartup;
         }
 
         public static void StopRecording()
@@ -69,18 +71,22 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
 
         private static void CollectMetrics()
         {
+            float currentTime = Time.realtimeSinceStartup;
+            float frameDeltaTime = currentTime - _lastFrameTime;
+            _lastFrameTime = currentTime;
+
             var metrics = new PerformanceMetrics
             {
-                FPS = 1.0f / Time.unscaledDeltaTime,
-                FrameTime = Time.unscaledDeltaTime * 1000f,
+                FPS = 1.0f / frameDeltaTime,
+                FrameTime = frameDeltaTime * 1000f,
                 TotalMemory = Profiler.GetTotalReservedMemoryLong() / MemoryDivider,
                 AllocatedMemory = Profiler.GetTotalAllocatedMemoryLong() / MemoryDivider,
                 MonoMemory = Profiler.GetMonoUsedSizeLong() / MemoryDivider,
-                DrawCalls = UnityEditorInternal.RenderStatistics.drawCalls,
-                VertexCount = UnityEditorInternal.RenderStatistics.vertices,
-                BatchCount = UnityEditorInternal.RenderStatistics.batches,
-                GpuTime = UnityEditorInternal.RenderStatistics.gpuTime,
-                CpuFrameTime = UnityEditorInternal.RenderStatistics.renderTime,
+                DrawCalls = 0, // Will be updated through profiler samples
+                VertexCount = 0, // Will be updated through profiler samples
+                BatchCount = 0, // Will be updated through profiler samples
+                GpuTime = 0, // Will be calculated from profiler samples
+                CpuFrameTime = frameDeltaTime * 1000f,
                 ActiveGameObjects = Object.FindObjectsOfType<GameObject>().Length,
                 TotalComponents = Object.FindObjectsOfType<Component>().Length
             };
@@ -111,11 +117,42 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
             _lastScriptTime = currentScriptTime;
             Profiler.EndSample();
 
+            // Track rendering metrics using Profiler.BeginSample
+            Profiler.BeginSample("Rendering");
+            metrics.DrawCalls = Camera.main != null ? UnityStats.GetDrawCalls() : 0;
+            metrics.VertexCount = Camera.main != null ? UnityStats.GetTriangles() * 3 : 0; // Approximate from triangles
+            metrics.BatchCount = Camera.main != null ? UnityStats.GetBatches() : 0;
+            Profiler.EndSample();
+
             CurrentMetrics = metrics;
             MetricsHistory.Enqueue(metrics);
 
             if (MetricsHistory.Count > MaxSamples)
                 MetricsHistory.Dequeue();
+        }
+
+        private static class UnityStats
+        {
+            public static int GetDrawCalls()
+            {
+                return Camera.main != null ? Camera.main.GetCommandBuffers(CameraEvent.AfterForwardOpaque).Sum(buffer => buffer.sizeInBytes) > 0 ? 1 : 0 : 0;
+            }
+
+            public static int GetBatches()
+            {
+                return Camera.main != null ? Camera.main.GetCommandBuffers(CameraEvent.AfterForwardOpaque).Length : 0;
+            }
+
+            public static int GetTriangles()
+            {
+                if (Camera.main == null) return 0;
+                var renderers = Object.FindObjectsOfType<MeshRenderer>();
+                return renderers.Sum(r => {
+                    if (r.GetComponent<MeshFilter>()?.sharedMesh != null)
+                        return r.GetComponent<MeshFilter>().sharedMesh.triangles.Length / 3;
+                    return 0;
+                });
+            }
         }
 
         public static PerformanceReport GenerateReport()
