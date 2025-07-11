@@ -290,5 +290,17 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				}
 			}
 		}
+
+		[MenuItem("Assets/Open C# Project in Cursor")]
+		public static void OpenProjectFile()
+		{
+			_editor.OpenProject();
+			Debug.Log("[Cursor Integration] Project files generated for Cursor.");
+		}
+
+		public static bool IsVisualStudioPC()
+		{
+			return _editor.IsVisualStudioPC();
+		}
 	}
 }

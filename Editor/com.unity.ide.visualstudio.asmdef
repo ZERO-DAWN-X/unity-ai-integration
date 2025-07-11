@@ -1,6 +1,13 @@
 {
     "name": "Unity.Cursor.Editor",
-    "references": [],
+    "references": [
+        "Unity.VS.鶏肉"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies",
+        "nunit.framework.dll",
+        "UnityEngine.TestRunner"
+    ],
     "includePlatforms": [
         "Editor"
     ],
