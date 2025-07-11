@@ -27,7 +27,7 @@ Transform your Unity development experience with intelligent code editing, debug
 2. Navigate to **Window → Package Manager**
 3. Click the **"+"** button (top-left corner)
 4. Select **"Add package from git URL"**
-5. Enter: `https://github.com/boxqkrtm/com.unity.ide.cursor.git`
+5. Enter: `https://github.com/ZERO-DAWN-X/unity-ai-integration.git`
 6. Click **Add**
 
 ### Setup
@@ -139,3 +139,26 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 ## Acknowledgments
 
 Built upon Unity's Visual Studio Tools integration framework, adapted for Cursor AI Editor compatibility.
+
+### Original Source
+
+This package is based on the original work by **boxqkrtm** at [com.unity.ide.cursor](https://github.com/boxqkrtm/com.unity.ide.cursor). 
+
+**Special thanks to:**
+- **boxqkrtm** - Original Unity Cursor integration implementation
+- **Microsoft & Unity Technologies** - Visual Studio Tools for Unity framework
+- **Cursor Team** - Cursor AI Editor development
+
+### Modifications & Enhancements
+
+This repository (`unity-ai-integration`) includes:
+- Enhanced README with professional documentation
+- Visual assets and improved presentation
+- Streamlined installation process
+- Additional platform compatibility notes
+- Comprehensive troubleshooting guides
+
+---
+
+**Repository Maintainer:** [ZERO-DAWN-X](https://github.com/ZERO-DAWN-X)  
+**Original Source:** [boxqkrtm/com.unity.ide.cursor](https://github.com/boxqkrtm/com.unity.ide.cursor)
