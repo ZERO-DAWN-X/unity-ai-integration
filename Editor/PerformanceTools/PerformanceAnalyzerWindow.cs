@@ -241,4 +241,3 @@ namespace Microsoft.Unity.VisualStudio.Editor.Performance
         }
     }
 } 
-} 
