@@ -93,12 +93,19 @@ YourProject/
 
 ### Version 2.0.24+ Important Update
 
-The package name changed from `com.unity.ide.cursor` to `com.zerodawnx.ide.cursor` to comply with Unity's attribution guidelines.
+### New Features in Version 2.0.25+
 
-**If updating from older versions:**
-1. Remove the existing package first
-2. Clear Package Manager cache
-3. Install the new version to avoid conflicts
+🚀 **Asset Management System**
+- **Asset Analyzer** - Comprehensive project asset analysis and dependency tracking
+- **Asset Optimizer** - Automatic texture, model, and audio optimization for better performance
+- **Smart Compression** - Platform-specific optimization (mobile vs desktop)
+- **Usage Detection** - Identifies unused assets and optimization opportunities
+
+🔧 **Enhanced Developer Tools**
+- **Intelligent Asset Processing** - Batch optimization with progress tracking
+- **Memory Optimization** - Automatic texture size limiting and compression
+- **Platform-Specific Settings** - Optimized configurations for Android/iOS builds
+- **Audio Optimization** - Smart audio compression based on clip length and usage
 
 ---
 
