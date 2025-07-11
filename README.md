@@ -1,4 +1,4 @@
-# Unity Cursor Integration
+# Unity AI Integration
 
 ![Unity AI Integration](Documentation~/Images/hero.jpg)
 
