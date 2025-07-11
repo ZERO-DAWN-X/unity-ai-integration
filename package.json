@@ -1,14 +1,22 @@
 {
-  "name": "com.boxqkrtm.ide.cursor",
-  "displayName": "Cursor Editor",
-  "description": "Cursor editor integration for supporting Cursor as code editor for unity. Adds support for generating csproj files for intellisense purposes, auto discovery of installations, etc.",
+  "name": "com.zero-dawn-x.ide.cursor",
+  "displayName": "Cursor AI Editor",
+  "description": "Enhanced Unity integration for Cursor AI Editor. Features intelligent code completion, project management, and seamless debugging capabilities. Based on the original work by boxqkrtm.",
   "version": "2.0.25",
   "unity": "2019.4",
   "unityRelease": "25f1",
+  "author": {
+    "name": "ZERO-DAWN-X",
+    "url": "https://github.com/ZERO-DAWN-X"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ZERO-DAWN-X/unity-ai-integration.git"
+  },
   "dependencies": {
     "com.unity.test-framework": "1.1.9"
   },
   "_upm": {
-    "changelog": "Integration:\n\n- Add support for Cursor"
+    "changelog": "Enhanced Integration:\n\n- Improved Cursor AI Editor support\n- Updated documentation and visual assets\n- Enhanced user experience and installation process"
   }
 }
