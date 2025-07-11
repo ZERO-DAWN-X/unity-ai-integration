@@ -218,17 +218,17 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
             // Left group - Main actions
             EditorGUILayout.BeginHorizontal(GUILayout.MaxWidth(TOOLBAR_BUTTON_WIDTH * 3 + TOOLBAR_BUTTON_SPACING * 2));
-            if (GUILayout.Button("Analyze", _toolbarButtonStyle, GUILayout.Width(TOOLBAR_BUTTON_WIDTH)))
+            if (GUILayout.Button(new GUIContent("Analyze", EditorGUIUtility.IconContent("Refresh").image), _toolbarButtonStyle, GUILayout.Width(TOOLBAR_BUTTON_WIDTH)))
             {
                 AnalyzeAssets();
             }
             GUILayout.Space(TOOLBAR_BUTTON_SPACING);
-            if (GUILayout.Button("Optimize", _toolbarButtonStyle, GUILayout.Width(TOOLBAR_BUTTON_WIDTH)))
+            if (GUILayout.Button(new GUIContent("Optimize", EditorGUIUtility.IconContent("Settings").image), _toolbarButtonStyle, GUILayout.Width(TOOLBAR_BUTTON_WIDTH)))
             {
                 OptimizeAssets();
             }
             GUILayout.Space(TOOLBAR_BUTTON_SPACING);
-            if (GUILayout.Button("Refresh", _toolbarButtonStyle, GUILayout.Width(TOOLBAR_BUTTON_WIDTH)))
+            if (GUILayout.Button(new GUIContent("Refresh", EditorGUIUtility.IconContent("Refresh").image), _toolbarButtonStyle, GUILayout.Width(TOOLBAR_BUTTON_WIDTH)))
             {
                 RefreshAnalysis();
             }
@@ -240,7 +240,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
             EditorGUILayout.BeginHorizontal();
             _showUnusedAssets = GUILayout.Toggle(_showUnusedAssets, new GUIContent(" Show Unused", EditorGUIUtility.IconContent("TreeEditor.Trash").image), _toggleStyle);
             GUILayout.Space(TOOLBAR_BUTTON_SPACING);
-            _showDependencies = GUILayout.Toggle(_showDependencies, new GUIContent(" Dependencies", EditorGUIUtility.IconContent("d_GraphicsInfo").image), _toggleStyle);
+            _showDependencies = GUILayout.Toggle(_showDependencies, new GUIContent(" Dependencies", EditorGUIUtility.IconContent("Package Manager").image), _toggleStyle);
             GUILayout.Space(TOOLBAR_BUTTON_SPACING);
             _showNamingIssues = GUILayout.Toggle(_showNamingIssues, new GUIContent(" Naming Issues", EditorGUIUtility.IconContent("FilterByLabel").image), _toggleStyle);
             EditorGUILayout.EndHorizontal();
@@ -249,6 +249,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
             // Right group - Search
             EditorGUILayout.BeginHorizontal(GUILayout.MaxWidth(200));
+            GUILayout.Label(EditorGUIUtility.IconContent("Search").image, GUILayout.Width(20));
             _searchFilter = EditorGUILayout.TextField(_searchFilter, _searchStyle);
             if (GUILayout.Button("×", EditorStyles.label, GUILayout.Width(20)) && !string.IsNullOrEmpty(_searchFilter))
             {
