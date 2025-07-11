@@ -1,4 +1,4 @@
-# Unity AI Integration PLUGIN
+# Unity AI Integration
 
 ![Unity AI Integration](Documentation~/Images/hero.jpg)
 
