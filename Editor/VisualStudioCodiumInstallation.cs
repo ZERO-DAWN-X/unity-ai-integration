@@ -57,11 +57,11 @@ namespace Microsoft.Unity.VisualStudio.Editor {
 
 		private static bool IsCandidateForDiscovery(string path) {
 #if UNITY_EDITOR_OSX
-			return Directory.Exists(path) && Regex.IsMatch(path, ".*Codium.*.app$", RegexOptions.IgnoreCase);
+			return Directory.Exists(path) && (Regex.IsMatch(path, ".*Codium.*.app$", RegexOptions.IgnoreCase) || Regex.IsMatch(path, ".*Windsurf.*.app$", RegexOptions.IgnoreCase));
 #elif UNITY_EDITOR_WIN
-			return File.Exists(path) && Regex.IsMatch(path, ".*Codium.*.exe$", RegexOptions.IgnoreCase);
+			return File.Exists(path) && (Regex.IsMatch(path, ".*Codium.*.exe$", RegexOptions.IgnoreCase) || Regex.IsMatch(path, ".*Windsurf.*.exe$", RegexOptions.IgnoreCase));
 #else
-			return File.Exists(path) && path.EndsWith("Codium", StringComparison.OrdinalIgnoreCase);
+			return File.Exists(path) && (path.EndsWith("Codium", StringComparison.OrdinalIgnoreCase) || path.EndsWith("Windsurf", StringComparison.OrdinalIgnoreCase));
 #endif
 		}
 
@@ -113,9 +113,13 @@ namespace Microsoft.Unity.VisualStudio.Editor {
 			}
 
 			isPrerelease = isPrerelease || editorPath.ToLower().Contains("insider");
+			// Determine if this is Windsurf or Codium based on the path
+			var isWindsurf = editorPath.ToLower().Contains("windsurf");
+			var editorName = isWindsurf ? "Windsurf" : "Codium";
+			
 			installation = new VisualStudioCodiumInstallation() {
 				IsPrerelease = isPrerelease,
-				Name = "Codium" + (isPrerelease ? " - Insider" : string.Empty) + (version != null ? $" [{version.ToString(3)}]" : string.Empty),
+				Name = editorName + (isPrerelease ? " - Insider" : string.Empty) + (version != null ? $" [{version.ToString(3)}]" : string.Empty),
 				Path = editorPath,
 				Version = version ?? new Version()
 			};
@@ -132,15 +136,20 @@ namespace Microsoft.Unity.VisualStudio.Editor {
 
 			foreach (var basePath in new[] { localAppPath, programFiles }) {
 				candidates.Add(IOPath.Combine(basePath, "Codium", "Codium.exe"));
+				candidates.Add(IOPath.Combine(basePath, "Windsurf", "Windsurf.exe"));
 			}
 #elif UNITY_EDITOR_OSX
 			var appPath = IOPath.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles));
 			candidates.AddRange(Directory.EnumerateDirectories(appPath, "Codium*.app"));
+			candidates.AddRange(Directory.EnumerateDirectories(appPath, "Windsurf*.app"));
 #elif UNITY_EDITOR_LINUX
 			// Well known locations
 			candidates.Add("/usr/bin/Codium");
 			candidates.Add("/bin/Codium");
 			candidates.Add("/usr/local/bin/Codium");
+			candidates.Add("/usr/bin/Windsurf");
+			candidates.Add("/bin/Windsurf");
+			candidates.Add("/usr/local/bin/Windsurf");
 
 			// Preference ordered base directories relative to which desktop files should be searched
 			candidates.AddRange(GetXdgCandidates());
@@ -168,9 +177,18 @@ namespace Microsoft.Unity.VisualStudio.Editor {
 
 				try
 				{
-					var desktopFile = IOPath.Combine(dir, "applications/code.desktop");
-					if (!File.Exists(desktopFile))
-						continue;
+					// Try Codium desktop file first
+					var desktopFile = IOPath.Combine(dir, "applications/codium.desktop");
+					if (!File.Exists(desktopFile)) {
+						// Try Windsurf desktop file
+						desktopFile = IOPath.Combine(dir, "applications/windsurf.desktop");
+						if (!File.Exists(desktopFile)) {
+							// Try generic code desktop file
+							desktopFile = IOPath.Combine(dir, "applications/code.desktop");
+							if (!File.Exists(desktopFile))
+								continue;
+						}
+					}
 				
 					var content = File.ReadAllText(desktopFile);
 					match = DesktopFileExecEntry.Match(content);
