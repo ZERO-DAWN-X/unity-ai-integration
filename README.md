@@ -2,7 +2,7 @@
 
 ![Unity AI Integration](Documentation~/Images/hero.jpg)
 
-> **A powerful Unity package that seamlessly integrates Cursor AI Editor with Unity development workflow**
+> **A powerful Unity package that seamlessly integrates Cursor AI Editor and Windsurf (Codium) with Unity development workflow**
 
 ---
 
@@ -12,10 +12,11 @@ Transform your Unity development experience with intelligent code editing, debug
 
 ### What This Package Does
 
-- **Automatic Detection** - Finds Cursor installations across all platforms
+- **Automatic Detection** - Finds Cursor and Windsurf installations across all platforms
 - **Smart Project Generation** - Creates optimized `.csproj` and `.sln` files for IntelliSense  
-- **Debugging Support** - Full Unity debugging capabilities within Cursor
+- **Debugging Support** - Full Unity debugging capabilities within both editors
 - **Workspace Configuration** - Automatically configures `.vscode` settings for optimal workflow
+- **Multi-Editor Support** - Seamlessly switch between Cursor and Windsurf
 
 ---
 
@@ -33,8 +34,8 @@ Transform your Unity development experience with intelligent code editing, debug
 ### Setup
 
 Once installed, the package automatically:
-- Detects your Cursor installation
-- Configures Unity to use Cursor as the default script editor
+- Detects your Cursor and Windsurf installations
+- Configures Unity to use your preferred AI editor as the default script editor
 - Sets up project files for optimal IntelliSense support
 
 ---
@@ -45,7 +46,8 @@ Once installed, the package automatically:
 
 ### Core Integration
 - **Cross-Platform Support** - Windows, macOS, and Linux compatibility
-- **Version Detection** - Automatically identifies Cursor version and configuration
+- **Multi-Editor Support** - Seamlessly works with both Cursor and Windsurf (Codium)
+- **Version Detection** - Automatically identifies editor versions and configurations
 - **Hot Reload** - Instant script compilation and error detection
 
 ### Developer Experience
@@ -53,16 +55,25 @@ Once installed, the package automatically:
 - **Integrated Debugging** - Attach debugger directly to Unity Editor
 - **Clean Workspace** - Hides Unity meta files and unnecessary clutter
 - **Extension Recommendations** - Suggests essential Unity development extensions
+- **AI-Powered Development** - Leverage AI assistance in both Cursor and Windsurf
 
 ---
 
 ## Platform Support
 
+### Cursor AI Editor
 | Platform | Installation Path | Status |
 |----------|------------------|---------|
 | Windows | `%LOCALAPPDATA%\Programs\cursor\cursor.exe` | ✅ Supported |
 | macOS | `/Applications/Cursor.app` | ✅ Supported |
 | Linux | `/usr/bin/cursor` | ✅ Supported |
+
+### Windsurf (Codium) Editor
+| Platform | Installation Path | Status |
+|----------|------------------|---------|
+| Windows | `%LOCALAPPDATA%\Programs\Windsurf\Windsurf.exe` | ✅ Supported |
+| macOS | `/Applications/Windsurf.app` | ✅ Supported |
+| Linux | `/usr/bin/Windsurf` | ✅ Supported |
 
 ---
 
@@ -84,7 +95,7 @@ YourProject/
 ## Requirements
 
 - **Unity Version**: 2019.4 or later
-- **Cursor Editor**: Any recent version
+- **Supported Editors**: Cursor AI Editor or Windsurf (Codium) - any recent version
 - **Dependencies**: `com.unity.test-framework@1.1.9`
 
 ---
@@ -113,17 +124,17 @@ YourProject/
 
 ### Common Issues
 
-**Cursor not detected automatically?**
-- Ensure Cursor is installed in standard directories
+**Editor not detected automatically?**
+- Ensure Cursor or Windsurf is installed in standard directories
 - Check that Unity has permission to access the installation path
 
 **IntelliSense not working?**
 - Verify that project files (.sln/.csproj) are generated
-- Restart Cursor after Unity project generation
+- Restart your editor after Unity project generation
 
 **Debugging connection fails?**
 - Confirm Unity Editor is running
-- Check that Visual Studio Tools for Unity extension is installed in Cursor
+- Check that Visual Studio Tools for Unity extension is installed in your editor
 
 ---
 
@@ -145,16 +156,20 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Acknowledgments
 
-Built upon Unity's Visual Studio Tools integration framework, adapted for Cursor AI Editor compatibility.
+Built upon Unity's Visual Studio Tools integration framework, adapted for Cursor AI Editor and Windsurf compatibility.
 
-### Original Source
+### Original Sources
 
-This package is based on the original work by **boxqkrtm** at [com.unity.ide.cursor](https://github.com/boxqkrtm/com.unity.ide.cursor). 
+This package is based on the original work by:
+- **boxqkrtm** at [com.unity.ide.cursor](https://github.com/boxqkrtm/com.unity.ide.cursor)
+- **Asuta** at [com.unity.ide.windsurf](https://github.com/Asuta/com.unity.ide.windsurf)
 
 **Special thanks to:**
 - **boxqkrtm** - Original Unity Cursor integration implementation
+- **Asuta** - Windsurf (Codium) integration implementation
 - **Microsoft & Unity Technologies** - Visual Studio Tools for Unity framework
 - **Cursor Team** - Cursor AI Editor development
+- **Windsurf Team** - Windsurf AI Editor development
 
 ### Modifications & Enhancements
 
@@ -164,8 +179,13 @@ This repository (`unity-ai-integration`) includes:
 - Streamlined installation process
 - Additional platform compatibility notes
 - Comprehensive troubleshooting guides
+- **Multi-Editor Support** - Unified support for both Cursor and Windsurf
+- **Asset Management Tools** - Advanced asset analysis and optimization
+- **Scene Management Tools** - Scene hierarchy analysis and optimization
 
 ---
 
 **Repository Maintainer:** [ZERO-DAWN-X](https://github.com/ZERO-DAWN-X)  
-**Original Source:** [boxqkrtm/com.unity.ide.cursor](https://github.com/boxqkrtm/com.unity.ide.cursor)
+**Original Sources:** 
+- [boxqkrtm/com.unity.ide.cursor](https://github.com/boxqkrtm/com.unity.ide.cursor)
+- [Asuta/com.unity.ide.windsurf](https://github.com/Asuta/com.unity.ide.windsurf)
