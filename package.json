@@ -1,7 +1,7 @@
 {
   "name": "com.zerodawnx.ide.cursor",
   "displayName": "ZERODAWN-X AI Editor",
-  "description": "Enhanced Unity integration for Cursor and Windsurf AI Editors. Features intelligent code completion, project management, and seamless debugging capabilities.",
+  "description": "Enhanced Unity integration for Cursor AI Editor. Features intelligent code completion, project management, and seamless debugging capabilities.",
   "version": "2.0.25",
   "unity": "2019.4",
   "unityRelease": "25f1",
@@ -17,6 +17,6 @@
     "com.unity.test-framework": "1.1.9"
   },
   "_upm": {
-    "changelog": "Enhanced Integration:\n\n- Added Windsurf AI Editor support\n- Improved Cursor AI Editor support\n- Updated documentation and visual assets\n- Enhanced user experience and installation process"
+    "changelog": "Enhanced Integration:\n\n- Improved Cursor AI Editor support\n- Updated documentation and visual assets\n- Enhanced user experience and installation process"
   }
 }
