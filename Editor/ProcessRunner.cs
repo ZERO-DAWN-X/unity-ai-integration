@@ -209,5 +209,99 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				return null;
 			}
 		}
+
+		public static string[] GetWindsurfProcessWorkspaces(Process process)
+		{
+			if (process == null)
+				return null;
+
+			try
+			{
+				var workspaces = new List<string>();
+				var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+				string windsurfStoragePath;
+
+#if UNITY_EDITOR_OSX
+				windsurfStoragePath = Path.Combine(userProfile, "Library", "Application Support", "Windsurf", "User", "workspaceStorage");
+#elif UNITY_EDITOR_LINUX
+				windsurfStoragePath = Path.Combine(userProfile, ".config", "Windsurf", "User", "workspaceStorage");
+#else
+				windsurfStoragePath = Path.Combine(userProfile, "AppData", "Roaming", "Windsurf", "User", "workspaceStorage");
+#endif
+				
+				Debug.Log($"[Windsurf] Looking for workspaces in: {windsurfStoragePath}");
+				
+				if (Directory.Exists(windsurfStoragePath))
+				{
+					foreach (var workspaceDir in Directory.GetDirectories(windsurfStoragePath))
+					{
+						try
+						{
+							var workspaceStatePath = Path.Combine(workspaceDir, "workspace.json");
+							if (File.Exists(workspaceStatePath))
+							{
+								var content = File.ReadAllText(workspaceStatePath);
+								if (!string.IsNullOrEmpty(content))
+								{
+									var workspace = JSONNode.Parse(content);
+									if (workspace != null)
+									{
+										var folder = workspace["folder"];
+										if (folder != null && !string.IsNullOrEmpty(folder.Value))
+										{
+											var workspacePath = folder.Value;
+											if (workspacePath.StartsWith("file:///"))
+											{
+												workspacePath = Uri.UnescapeDataString(workspacePath.Substring(8));
+												workspaces.Add(workspacePath);
+											}
+										}
+									}
+								}
+							}
+
+							var windowStatePath = Path.Combine(workspaceDir, "window.json");
+							if (File.Exists(windowStatePath))
+							{
+								var content = File.ReadAllText(windowStatePath);
+								if (!string.IsNullOrEmpty(content))
+								{
+									var windowState = JSONNode.Parse(content);
+									if (windowState != null)
+									{
+										var workspace = windowState["workspace"];
+										if (workspace != null && !string.IsNullOrEmpty(workspace.Value))
+										{
+											var workspacePath = workspace.Value;
+											if (workspacePath.StartsWith("file:///"))
+											{
+												workspacePath = Uri.UnescapeDataString(workspacePath.Substring(8));
+												workspaces.Add(workspacePath);
+											}
+										}
+									}
+								}
+							}
+						}
+						catch (Exception ex)
+						{
+							Debug.LogWarning($"[Windsurf] Error reading workspace state file: {ex.Message}");
+							continue;
+						}
+					}
+				}
+				else
+				{
+					Debug.LogWarning($"[Windsurf] Workspace storage directory not found: {windsurfStoragePath}");
+				}
+
+				return workspaces.Distinct().ToArray();
+			}
+			catch (Exception ex)
+			{
+				Debug.LogError($"[Windsurf] Error getting workspace directory: {ex.Message}");
+				return null;
+			}
+		}
 	}
 }
